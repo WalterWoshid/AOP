@@ -81,8 +81,8 @@ typedef struct {
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 	
-	pcre *re_method;
-	pcre *re_class;
+	pcre2_code *re_method;
+	pcre2_code *re_class;
 } pointcut;
 
 typedef struct {

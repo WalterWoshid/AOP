@@ -44,7 +44,6 @@ ZEND_END_ARG_INFO()
 
 void make_regexp_on_pointcut (pointcut *pc) /*{{{*/
 {
-	pcre_extra *pcre_extra = NULL;
 	int preg_options = 0;
 	zend_string *regexp;
 	zend_string *regexp_buffer = NULL;
@@ -83,7 +82,7 @@ void make_regexp_on_pointcut (pointcut *pc) /*{{{*/
 	zend_string_release(regexp_buffer);
 
 	regexp = zend_string_init(tempregexp, strlen(tempregexp), 0);
-	pc->re_method = pcre_get_compiled_regex(regexp, &pcre_extra, &preg_options);
+	pc->re_method = pcre_get_compiled_regex(regexp, &preg_options);
 	zend_string_release(regexp);	
 
 	if (!pc->re_method) {
@@ -121,7 +120,7 @@ void make_regexp_on_pointcut (pointcut *pc) /*{{{*/
 		zend_string_release(regexp_buffer);
 
 		regexp = zend_string_init(tempregexp, strlen(tempregexp), 0);
-		pc->re_class = pcre_get_compiled_regex(regexp, &pcre_extra, &preg_options);
+		pc->re_class = pcre_get_compiled_regex(regexp, &preg_options);
 		zend_string_release(regexp);
 
 		if (!pc->re_class) {

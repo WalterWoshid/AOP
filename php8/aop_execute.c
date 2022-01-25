@@ -15,6 +15,7 @@
   | Author: pangudashu@gmail.com                                         |
   +----------------------------------------------------------------------+
 */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -61,33 +62,49 @@ static int strcmp_with_joker_case(char *str_with_jok, char *str, int case_sensit
 static int pointcut_match_zend_class_entry(pointcut *pc, zend_class_entry *ce) /*{{{*/
 {
     int i, matches;
+    pcre2_match_data *match_data;
+    uint32_t preg_options, capture_count;
+    
+    if (!pc->re_class) {
+        return 0;
+    }
 
-    matches = pcre_exec(pc->re_class, NULL, ZSTR_VAL(ce->name), ZSTR_LEN(ce->name), 0, 0, NULL, 0);
+    match_data = php_pcre_create_match_data(capture_count, pc->re_class);
+    if (!match_data) {
+        return 0;
+    }
+    
+    matches = pcre2_match(pc->re_class, (PCRE2_SPTR)ZSTR_VAL(ce->name), ZSTR_LEN(ce->name), 0, preg_options, match_data, php_pcre_mctx());
     if (matches >= 0) {
+        php_pcre_free_match_data(match_data);
         return 1;
     }           
     for (i = 0; i < (int) ce->num_interfaces; i++) {
-        matches = pcre_exec(pc->re_class, NULL, ZSTR_VAL(ce->interfaces[i]->name), ZSTR_LEN(ce->interfaces[i]->name), 0, 0, NULL, 0);
+        matches = pcre2_match(pc->re_class, (PCRE2_SPTR)ZSTR_VAL(ce->interfaces[i]->name), ZSTR_LEN(ce->interfaces[i]->name), 0, preg_options, match_data, php_pcre_mctx());
         if (matches >= 0) {
+            php_pcre_free_match_data(match_data);
             return 1;
         }
     }
     
     for (i = 0; i < (int) ce->num_traits; i++) {
-        matches = pcre_exec(pc->re_class, NULL, ZSTR_VAL(ce->traits[i]->name), ZSTR_LEN(ce->traits[i]->name), 0, 0, NULL, 0);
-        if (matches>=0) {
+        matches = pcre2_match(pc->re_class, (PCRE2_SPTR)ZSTR_VAL(ce->trait_names[i].name), ZSTR_LEN(ce->trait_names[i].name), 0, preg_options, match_data, php_pcre_mctx());
+        if (matches >= 0) {
+            php_pcre_free_match_data(match_data);
             return 1;
         }
     }
     
     ce = ce->parent;
     while (ce != NULL) {
-        matches = pcre_exec(pc->re_class, NULL, ZSTR_VAL(ce->name), ZSTR_LEN(ce->name), 0, 0, NULL, 0);
+        matches = pcre2_match(pc->re_class, (PCRE2_SPTR)ZSTR_VAL(ce->name), ZSTR_LEN(ce->name), 0, preg_options, match_data, php_pcre_mctx());
         if (matches >= 0) {
+            php_pcre_free_match_data(match_data);
             return 1;
         }
         ce = ce->parent;
     }
+    php_pcre_free_match_data(match_data);
     return 0; 
 }
 /*}}}*/
@@ -100,7 +117,7 @@ static zend_array *calculate_class_pointcuts(zend_class_entry *ce, int kind_of_a
     
     ALLOC_HASHTABLE(ht);
     zend_hash_init(ht, 16, NULL, NULL , 0);
-   
+    
     ZEND_HASH_FOREACH_VAL(AOP_G(pointcuts_table), pc_value) {
         pc = (pointcut *)Z_PTR_P(pc_value); 
         if (!(pc->kind_of_advice & kind_of_advice)) {
@@ -108,7 +125,7 @@ static zend_array *calculate_class_pointcuts(zend_class_entry *ce, int kind_of_a
         }
         if ((ce == NULL && pc->kind_of_advice & AOP_KIND_FUNCTION) 
             || (ce != NULL && pointcut_match_zend_class_entry(pc, ce))) {
-	        zend_hash_next_index_insert(ht, pc_value);
+            zend_hash_next_index_insert(ht, pc_value);
         }
     } ZEND_HASH_FOREACH_END(); 
     
@@ -118,8 +135,11 @@ static zend_array *calculate_class_pointcuts(zend_class_entry *ce, int kind_of_a
 
 static int pointcut_match_zend_function(pointcut *pc, zend_execute_data *ex) /*{{{*/
 {
-    int comp_start = 0;
+    int comp_start, matches = 0;
     zend_function *curr_func = ex->func;
+    pcre2_match_data *match_data;
+    uint32_t preg_options, capture_count;
+    zend_string* function_name;
     
     //check static
     if (pc->static_state != 2) {
@@ -145,8 +165,15 @@ static int pointcut_match_zend_function(pointcut *pc, zend_execute_data *ex) /*{
         return 0;
     }
     if (pc->method_jok) {
-        int matches = pcre_exec(pc->re_method, NULL, ZSTR_VAL(curr_func->common.function_name), ZSTR_LEN(curr_func->common.function_name), 0, 0, NULL, 0);
+        match_data = php_pcre_create_match_data(capture_count, pc->re_method);
+        if (!match_data) {
+            return 0;
+        }
+        function_name = curr_func->common.function_name;
+        matches = pcre2_match(pc->re_method, (PCRE2_SPTR)ZSTR_VAL(function_name), ZSTR_LEN(function_name), 0, preg_options, match_data, php_pcre_mctx());
+        php_pcre_free_match_data(match_data);
     
+        // 0 means that the vector is too small to hold all the captured substring offsets
         if (matches < 0) {
             return 0;
         }
@@ -243,7 +270,7 @@ static zend_array *calculate_property_pointcuts(zval *object, zend_string *membe
     zend_ulong h;
 
     class_pointcuts = calculate_class_pointcuts(Z_OBJCE_P(object), kind);
-   
+
     ZEND_HASH_FOREACH_NUM_KEY_VAL(class_pointcuts, h, pc_value) {
         pc = (pointcut *)Z_PTR_P(pc_value);
         if (ZSTR_VAL(pc->method)[0] != '*') {
@@ -699,10 +726,10 @@ void func_pointcut_and_execute(zend_execute_data *ex) /*{{{*/
         uint32_t i, num_args = 0;
         zval *original_args_value;
 
-         for (i = 0; i < ex->func->common.num_args; i++) {
+        for (i = 0; i < ex->func->common.num_args; i++) {
             original_args_value = ZEND_CALL_VAR_NUM(ex, i);
             zval_ptr_dtor(original_args_value);
-         }
+        }
     }
     
     zval_ptr_dtor(&aop_object);
@@ -760,7 +787,7 @@ void do_read_property(HashPosition pos, zend_array *pointcut_table, zval *aop_ob
     zval *property_value;
     zend_class_entry *current_scope = NULL;
 
-    while(1){
+    while(1) {
         current_pc_value = zend_hash_get_current_data_ex(pointcut_table, &pos);
         if (current_pc_value == NULL || Z_TYPE_P(current_pc_value) != IS_UNDEF) {
             break;
