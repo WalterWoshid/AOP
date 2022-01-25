@@ -27,11 +27,15 @@
 #include "ext/pcre/php_pcre.h"
 
 #include "php_aop.h"
+#include "aop_execute.h"
 #include "aop_joinpoint.h"
 
 zend_class_entry *aop_joinpoint_ce;
 
 zend_object_handlers AopJoinpoint_object_handlers;
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_void, 0, 0, 0)
+ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_aop_args_returnbyref, 0, ZEND_RETURN_REFERENCE, 0)
 ZEND_END_ARG_INFO()
@@ -49,22 +53,22 @@ ZEND_BEGIN_ARG_INFO(arginfo_aop_args_setAssignedValue, 0)
 ZEND_END_ARG_INFO()
 
 zend_function_entry aop_joinpoint_methods[] = {
-    PHP_ME(AopJoinpoint, getArguments, NULL, 0)
+    PHP_ME(AopJoinpoint, getArguments, arginfo_void, 0)
     PHP_ME(AopJoinpoint, setArguments, arginfo_aop_args_setArguments, 0)
-    PHP_ME(AopJoinpoint, getException, NULL, 0)
-    PHP_ME(AopJoinpoint, getPointcut, NULL, 0)
-    PHP_ME(AopJoinpoint, process, NULL, 0)
-    PHP_ME(AopJoinpoint, getKindOfAdvice, NULL, 0)
-    PHP_ME(AopJoinpoint, getObject, NULL, 0)
+    PHP_ME(AopJoinpoint, getException, arginfo_void, 0)
+    PHP_ME(AopJoinpoint, getPointcut, arginfo_void, 0)
+    PHP_ME(AopJoinpoint, process, arginfo_void, 0)
+    PHP_ME(AopJoinpoint, getKindOfAdvice, arginfo_void, 0)
+    PHP_ME(AopJoinpoint, getObject, arginfo_void, 0)
     PHP_ME(AopJoinpoint, getReturnedValue, arginfo_aop_args_returnbyref, 0)
     PHP_ME(AopJoinpoint, setReturnedValue, arginfo_aop_args_setReturnedValue, 0)
-    PHP_ME(AopJoinpoint, getClassName, NULL, 0)
-    PHP_ME(AopJoinpoint, getMethodName, NULL, 0)
-    PHP_ME(AopJoinpoint, getFunctionName, NULL, 0)
+    PHP_ME(AopJoinpoint, getClassName, arginfo_void, 0)
+    PHP_ME(AopJoinpoint, getMethodName, arginfo_void, 0)
+    PHP_ME(AopJoinpoint, getFunctionName, arginfo_void, 0)
     PHP_ME(AopJoinpoint, getAssignedValue, arginfo_aop_args_returnbyref, 0)
     PHP_ME(AopJoinpoint, setAssignedValue, arginfo_aop_args_setAssignedValue, 0)
-    PHP_ME(AopJoinpoint, getPropertyName, NULL, 0)
-    PHP_ME(AopJoinpoint, getPropertyValue, NULL, 0)
+    PHP_ME(AopJoinpoint, getPropertyName, arginfo_void, 0)
+    PHP_ME(AopJoinpoint, getPropertyValue, arginfo_void, 0)
 
     PHP_FE_END
 };
@@ -99,16 +103,20 @@ static inline void _zend_assign_to_variable_reference(zval *variable_ptr, zval *
     }
 
     ref = Z_REF_P(value_ptr);
-    GC_REFCOUNT(ref)++;
+    int ref_i = GC_REFCOUNT(ref);
+    ref_i++;
     if (Z_REFCOUNTED_P(variable_ptr)) {
         zend_refcounted *garbage = Z_COUNTED_P(variable_ptr);
 
-        if (--GC_REFCOUNT(garbage) == 0) {
+        int ref_garbage = GC_REFCOUNT(garbage);
+        if (--ref_garbage == 0) {
             ZVAL_REF(variable_ptr, ref);
             zval_dtor_func_for_ptr(garbage);
             return;
         } else {
-            GC_ZVAL_CHECK_POSSIBLE_ROOT(variable_ptr);
+            if (UNEXPECTED(GC_MAY_LEAK(garbage))) {
+                gc_possible_root(garbage);
+            }
         }
     }
     ZVAL_REF(variable_ptr, ref);

@@ -62,6 +62,7 @@ PHP_METHOD(AopJoinpoint, getFunctionName);//done
 PHP_METHOD(AopJoinpoint, getException);//done
 PHP_METHOD(AopJoinpoint, process);//done
 
+ZEND_API void ZEND_FASTCALL _zval_dtor_func_for_ptr(zend_refcounted *p ZEND_FILE_LINE_DC);
+#define zval_dtor_func_for_ptr(zv) _zval_dtor_func_for_ptr(zv ZEND_FILE_LINE_CC)
+
 #endif
-
-

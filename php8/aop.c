@@ -28,6 +28,7 @@
 #include "ext/pcre/php_pcre.h"
 
 #include "php_aop.h"
+#include "aop_execute.h"
 #include "aop_joinpoint.h"
 #include "lexer.h"
 
@@ -284,6 +285,7 @@ PHP_MINIT_FUNCTION(aop)
 	zend_execute_internal = aop_execute_internal;
 
 	//2.overload zend_std_read_property and zend_std_write_property
+	zend_object_handlers std_object_handlers = std_object_handlers;
 	original_zend_std_read_property = std_object_handlers.read_property;
 	std_object_handlers.read_property = aop_read_property;
 

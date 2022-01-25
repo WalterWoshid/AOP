@@ -25,8 +25,10 @@
 #include "ext/standard/info.h"
 #include "ext/standard/php_string.h"
 #include "ext/pcre/php_pcre.h"
+#include "zend_execute.h"
 
 #include "php_aop.h"
+#include "aop_execute.h"
 #include "aop_joinpoint.h"
 
 static int strcmp_with_joker_case(char *str_with_jok, char *str, int case_sensitive) /*{{{*/
@@ -538,12 +540,7 @@ static void execute_context(zend_execute_data *execute_data, zval *args) /*{{{*/
             execute_internal(execute_data, execute_data->return_value);
         }
     } else { /* ZEND_OVERLOADED_FUNCTION */
-        //this will never happend,becase there's no hook for overload function
-#if PHP_MINOR_VERSION == 1
-        zend_do_fcall_overloaded(execute_data->func, execute_data, execute_data->return_value);
-#elif PHP_MINOR_VERSION == 2
         zend_do_fcall_overloaded(execute_data, execute_data->return_value);
-#endif
     }
 }
 /*}}}*/
