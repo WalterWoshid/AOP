@@ -1,3 +1,5 @@
+# This is a continuation of the original AOP PECL extension for PHP 8.1+
+
 # Introduction #
 
 AOP is a PECL extension that enables you to use Aspect Oriented Programming in PHP, without the need
@@ -7,10 +9,11 @@ The AOP extension is designed to be the easiest way you can think of for integra
 
 AOP aims to allow separation of cross-cutting concerns (cache, log, security, transactions, ...)
 
-[![Build Status](https://travis-ci.org/pangudashu/AOP.svg?branch=master)](https://travis-ci.org/pangudashu/AOP)
+[![Build Status](https://travis-ci.com/WalterWoshid/AOP.svg?branch=master)](https://travis-ci.com/WalterWoshid/AOP)
 
 ## Requirements ##
 
+- Version 2.x : PHP 8.1 or later
 - Version 1.x : PHP 7.0 or later
 - Version 0.x : PHP 5.5 or earlier
 
