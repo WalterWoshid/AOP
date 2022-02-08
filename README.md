@@ -178,3 +178,7 @@ a given user, a given context, a given procedure. A world where you can hunt wei
 
 We are sure that this extension will soon be part of your future development workflow!
 
+### THANKS
+stealth35 (Windows build)
+Julien Salleyron
+Gérald Croës
