@@ -18,13 +18,17 @@
 
 /* $Id$ */
 
+// Ignore unused macros
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
+
 #ifndef PHP_AOP_H
 #define PHP_AOP_H
 
 extern zend_module_entry aop_module_entry;
 #define phpext_aop_ptr &aop_module_entry
 
-#define PHP_AOP_VERSION "1.0.0" /* Replace with version number for your extension */
+#define PHP_AOP_VERSION "2.0.0" /* Replace with version number for your extension */
 
 #ifdef PHP_WIN32
 #   define PHP_AOP_API __declspec(dllexport)
@@ -128,26 +132,16 @@ zend_object_read_property_t			original_zend_std_read_property;
 zend_object_write_property_t		original_zend_std_write_property;
 zend_object_get_property_ptr_ptr_t	original_zend_std_get_property_ptr_ptr;
 
-zval *aop_read_property(zval *object, zval *member, int type, void **cache_slot, zval *rv);
-void aop_write_property(zval *object, zval *member, zval *value, void **cache_slot);
-zval *aop_get_property_ptr_ptr(zval *object, zval *member, int type, void **cache_slot);
+zval *aop_read_property(zend_object *object, zend_string *member, int type, void **cache_slot, zval *rv);
+zval *aop_write_property(zend_object *object, zend_string *member, zval *value, void **cache_slot);
+zval *aop_get_property_ptr_ptr(zend_object *object, zend_string *member, int type, void **cache_slot);
 
 void free_pointcut_cache(zval *elem);
 
-extern ZEND_DECLARE_MODULE_GLOBALS(aop);
+extern ZEND_DECLARE_MODULE_GLOBALS(aop)
 
 #if defined(ZTS) && defined(COMPILE_DL_AOP)
 ZEND_TSRMLS_CACHE_EXTERN()
 #endif
 
 #endif  /* PHP_AOP_H */
-
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */

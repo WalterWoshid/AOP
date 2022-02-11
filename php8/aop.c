@@ -16,7 +16,6 @@
   +----------------------------------------------------------------------+
 */
 
-/* $Id$ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -28,24 +27,19 @@
 #include "ext/pcre/php_pcre.h"
 
 #include "php_aop.h"
-#include "aop_execute.h"
 #include "aop_joinpoint.h"
 #include "lexer.h"
 
-static int le_aop;
-
 ZEND_DECLARE_MODULE_GLOBALS(aop)
-
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_aop_add, 0, 0, 2)
 	ZEND_ARG_INFO(0, pointcut)
 	ZEND_ARG_INFO(0, advice)
 ZEND_END_ARG_INFO()
 
-
-void make_regexp_on_pointcut (pointcut *pc) /*{{{*/
+void make_regexp_on_pointcut(pointcut *pc)
 {
-	int preg_options = 0;
+	uint32_t preg_options = 0;
 	zend_string *regexp;
 	zend_string *regexp_buffer = NULL;
 	zend_string *regexp_tmp = NULL;
@@ -129,9 +123,8 @@ void make_regexp_on_pointcut (pointcut *pc) /*{{{*/
 		}
 	}
 }
-/*}}}*/
 
-static pointcut *alloc_pointcut() /*{{{*/
+static pointcut *alloc_pointcut()
 {
     pointcut *pc = (pointcut *)emalloc(sizeof(pointcut));
 
@@ -143,17 +136,16 @@ static pointcut *alloc_pointcut() /*{{{*/
     pc->method = NULL;
     pc->selector = NULL;
     pc->kind_of_advice = 0;
-    //pc->fci = NULL;
-    //pc->fcic = NULL;
+    // pc->fci = NULL;
+    // pc->fcic = NULL;
     pc->re_method = NULL;
     pc->re_class = NULL;
     return pc;
 }
-/*}}}*/
 
 static void free_pointcut(zval *elem)
 {
-	pointcut *pc = (pointcut *)Z_PTR_P(elem);
+	pointcut *pc = (pointcut *) Z_PTR_P(elem);
 
 	if (pc == NULL) {
 		return;
@@ -174,7 +166,7 @@ static void free_pointcut(zval *elem)
 
 void free_pointcut_cache(zval *elem)
 {
-    pointcut_cache *cache = (pointcut_cache *)Z_PTR_P(elem);
+    pointcut_cache *cache = (pointcut_cache *) Z_PTR_P(elem);
     if (cache->ht != NULL) {
         zend_hash_destroy(cache->ht);
         FREE_HASHTABLE(cache->ht);
@@ -182,7 +174,7 @@ void free_pointcut_cache(zval *elem)
 	efree(cache);
 }
 
-static void add_pointcut (zend_fcall_info fci, zend_fcall_info_cache fci_cache, zend_string *selector, int cut_type) /*{{{*/
+static void add_pointcut(zend_fcall_info fci, zend_fcall_info_cache fci_cache, zend_string *selector, int cut_type)
 {
 	zval pointcut_val;
 	pointcut *pc = NULL;
@@ -201,13 +193,13 @@ static void add_pointcut (zend_fcall_info fci, zend_fcall_info_cache fci_cache, 
 	pc->fci_cache = fci_cache;
 	pc->kind_of_advice = cut_type;
 
-	state = (scanner_state *)emalloc(sizeof(scanner_state));
-	token = (scanner_token *)emalloc(sizeof(scanner_token));
+	state = (scanner_state *) emalloc(sizeof(scanner_state));
+	token = (scanner_token *) emalloc(sizeof(scanner_token));
 
 	state->start = ZSTR_VAL(selector);
 	state->end = state->start;
-	while(0 <= scan(state, token)) {
-	    //	    php_printf("TOKEN %d \n", token->TOKEN);
+	while (0 <= scan(state, token)) {
+	    // php_printf("TOKEN %d \n", token->TOKEN);
 		switch (token->TOKEN) {
 			case TOKEN_STATIC:
 				pc->static_state=token->int_val;
@@ -216,7 +208,7 @@ static void add_pointcut (zend_fcall_info fci, zend_fcall_info_cache fci_cache, 
 				pc->scope |= token->int_val;
 				break;
 			case TOKEN_CLASS:
-				pc->class_name = zend_string_init(temp_str, strlen(temp_str), 0);//estrdup(temp_str);
+				pc->class_name = zend_string_init(temp_str, strlen(temp_str), 0); // estrdup(temp_str);
 				efree(temp_str);
 				temp_str=NULL;
 				is_class=1;
@@ -232,10 +224,10 @@ static void add_pointcut (zend_fcall_info fci, zend_fcall_info_cache fci_cache, 
 				}
 				break;
 			case TOKEN_TEXT:
-				if (temp_str!=NULL) {
+				if (temp_str != NULL) {
 					efree(temp_str);
 				}
-				temp_str=estrdup(token->str_val);
+				temp_str = estrdup(token->str_val);
 				efree(token->str_val);
 				break;
 			default:
@@ -243,49 +235,55 @@ static void add_pointcut (zend_fcall_info fci, zend_fcall_info_cache fci_cache, 
 		}
 	}
 	if (temp_str != NULL) {
-		//method or property
+		// Method or property
 		pc->method = zend_string_init(temp_str, strlen(temp_str), 0);
 		efree(temp_str);
 	}
 	efree(state);
     efree(token);
 
-	//add("class::property", xxx)
+	// add("class::property", xxx)
 	if (pc->kind_of_advice == cut_type) {
 		pc->kind_of_advice |= AOP_KIND_READ | AOP_KIND_WRITE | AOP_KIND_PROPERTY;
 	}
 
 	make_regexp_on_pointcut(pc);
 	
-	//insert into hashTable:AOP_G(pointcuts)
+	// Insert into hashTable:AOP_G(pointcuts)
 	ZVAL_PTR(&pointcut_val, pc);
 	zend_hash_next_index_insert(AOP_G(pointcuts_table), &pointcut_val);
 	AOP_G(pointcut_version)++;
 }
-/*}}}*/
 
-/* {{{ PHP_INI
+/**
+ * Ini settings
  */
 PHP_INI_BEGIN()
     STD_PHP_INI_BOOLEAN("aop.enable", "1", PHP_INI_ALL, OnUpdateBool, aop_enable, zend_aop_globals, aop_globals)
 PHP_INI_END()
-/* }}} */
 
-/* {{{ PHP_MINIT_FUNCTION
+/**
+ * Module initialization
+ *
+ * @param type
+ * @param module_number
+ * @return
+ *
+ * @see https://www.phpinternalsbook.com/php7/extensions_design/php_lifecycle.html#module-initialization-minit
  */
 PHP_MINIT_FUNCTION(aop)
 {
 	REGISTER_INI_ENTRIES();
 	
-	//1.overload zend_execute_ex and zend_execute_internal
+	// 1. overload zend_execute_ex and zend_execute_internal (execution of functions)
 	original_zend_execute_ex = zend_execute_ex;
 	zend_execute_ex = aop_execute_ex;
 
 	original_zend_execute_internal = zend_execute_internal;
 	zend_execute_internal = aop_execute_internal;
 
-	//2.overload zend_std_read_property and zend_std_write_property
-	zend_object_handlers std_object_handlers = std_object_handlers;
+	// 2. overload zend_std_read_property and zend_std_write_property
+    zend_object_handlers std_object_handlers = std_object_handlers;
 	original_zend_std_read_property = std_object_handlers.read_property;
 	std_object_handlers.read_property = aop_read_property;
 
@@ -324,17 +322,29 @@ PHP_MINIT_FUNCTION(aop)
 
     return SUCCESS;
 }
-/* }}} */
 
-/* {{{ PHP_MSHUTDOWN_FUNCTION
+/**
+ * Module termination
+ *
+ * @param type
+ * @param module_number
+ * @return
+ *
+ * @see https://www.phpinternalsbook.com/php7/extensions_design/php_lifecycle.html#module-termination-mshutdown
  */
 PHP_MSHUTDOWN_FUNCTION(aop)
 {
     return SUCCESS;
 }
-/* }}} */
 
-/* {{{ PHP_RINIT_FUNCTION
+/**
+ * Request initialization
+ *
+ * @param type
+ * @param module_number
+ * @return
+ *
+ * @see https://www.phpinternalsbook.com/php7/extensions_design/php_lifecycle.html#request-initialization-rinit
  */
 PHP_RINIT_FUNCTION(aop)
 {
@@ -353,7 +363,7 @@ PHP_RINIT_FUNCTION(aop)
 	AOP_G(lock_read_property) = 0;
 	AOP_G(lock_write_property) = 0;
 
-	//init AOP_G(pointcuts_table)
+	// init AOP_G(pointcuts_table)
 	ALLOC_HASHTABLE(AOP_G(pointcuts_table));
 	zend_hash_init(AOP_G(pointcuts_table), 16, NULL, free_pointcut, 0);	
 
@@ -361,9 +371,15 @@ PHP_RINIT_FUNCTION(aop)
 	zend_hash_init(AOP_G(function_cache), 16, NULL, free_pointcut_cache, 0);	
     return SUCCESS;
 }
-/* }}} */
 
-/* {{{ PHP_RSHUTDOWN_FUNCTION
+/**
+ * Request termination
+ *
+ * @param type
+ * @param module_number
+ * @return
+ *
+ * @see https://www.phpinternalsbook.com/php7/extensions_design/php_lifecycle.html#request-termination-rshutdown
  */
 PHP_RSHUTDOWN_FUNCTION(aop)
 {
@@ -398,23 +414,32 @@ PHP_RSHUTDOWN_FUNCTION(aop)
 
     return SUCCESS;
 }
-/* }}} */
 
-/* {{{ PHP_MINFO_FUNCTION
+/**
+ * Module info
+ *
+ * @see https://www.phpinternalsbook.com/php7/extensions_design/php_lifecycle.html#information-gathering-minfo
  */
 PHP_MINFO_FUNCTION(aop)
 {
     php_info_print_table_start();
-    php_info_print_table_header(2, "aop support", "enabled");
+    php_info_print_table_header(2, "Aop support", "enabled");
     php_info_print_table_end();
 
     /* Remove comments if you have entries in php.ini
     DISPLAY_INI_ENTRIES();
     */
 }
-/* }}} */
 
-/*{{{ proto void aop_add_before(string selector, mixed pointcut)
+/**
+ * AOP add before
+ *
+ * @php_method aop_add_before(string selector, mixed pointcut)
+ *
+ * @php_param string selector
+ * @php_param mixed pointcut
+ *
+ * @php_return void
  */
 PHP_FUNCTION(aop_add_before)
 {
@@ -422,7 +447,7 @@ PHP_FUNCTION(aop_add_before)
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
-	//parse prameters
+	// Parse parameters
 	ZEND_PARSE_PARAMETERS_START(2, 2)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
@@ -436,9 +461,16 @@ PHP_FUNCTION(aop_add_before)
 	}
 	add_pointcut(fci, fci_cache, selector, AOP_KIND_BEFORE);
 }
-/*}}}*/
 
-/*{{{ proto void aop_add_around(string selector, mixed pointcut)
+/**
+ * AOP add around
+ *
+ * @php_method aop_add_around(string selector, mixed pointcut)
+ *
+ * @php_param string selector
+ * @php_param mixed pointcut
+ *
+ * @php_return void
  */
 PHP_FUNCTION(aop_add_around)
 {
@@ -446,7 +478,7 @@ PHP_FUNCTION(aop_add_around)
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
-	//parse prameters
+	// Parse parameters
 	ZEND_PARSE_PARAMETERS_START(2, 2)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
@@ -460,9 +492,16 @@ PHP_FUNCTION(aop_add_around)
 	}
 	add_pointcut(fci, fci_cache, selector, AOP_KIND_AROUND);
 }
-/*}}}*/
 
-/*{{{ proto void aop_add_after(string selector, mixed pointcut)
+/**
+ * AOP add after
+ *
+ * @php_method aop_add_after(string selector, mixed pointcut)
+ *
+ * @php_param string selector
+ * @php_param mixed pointcut
+ *
+ * @php_return void
  */
 PHP_FUNCTION(aop_add_after)
 {
@@ -470,7 +509,7 @@ PHP_FUNCTION(aop_add_after)
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
-	//parse prameters
+    // Parse parameters
 	ZEND_PARSE_PARAMETERS_START(2, 2)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
@@ -484,9 +523,16 @@ PHP_FUNCTION(aop_add_after)
 	}
 	add_pointcut(fci, fci_cache, selector, AOP_KIND_AFTER | AOP_KIND_CATCH | AOP_KIND_RETURN);
 }
-/*}}}*/
 
-/*{{{ proto void aop_add_after_returning(string selector, mixed pointcut)
+/**
+ * AOP add after returning
+ *
+ * @php_method aop_add_after_returning(string selector, mixed pointcut)
+ *
+ * @php_param string selector
+ * @php_param mixed pointcut
+ *
+ * @php_return void
  */
 PHP_FUNCTION(aop_add_after_returning)
 {
@@ -494,7 +540,7 @@ PHP_FUNCTION(aop_add_after_returning)
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
-	//parse prameters
+    // Parse parameters
 	ZEND_PARSE_PARAMETERS_START(2, 2)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
@@ -508,9 +554,16 @@ PHP_FUNCTION(aop_add_after_returning)
 	}
 	add_pointcut(fci, fci_cache, selector, AOP_KIND_AFTER | AOP_KIND_RETURN);
 }
-/*}}}*/
 
-/*{{{ proto void aop_add_after_throwing(string selector, mixed pointcut)
+/**
+ * AOP add after throwing
+ *
+ * @php_method aop_add_after_throwing(string selector, mixed pointcut)
+ *
+ * @php_param string selector
+ * @php_param mixed pointcut
+ *
+ * @php_return void
  */
 PHP_FUNCTION(aop_add_after_throwing)
 {
@@ -518,7 +571,7 @@ PHP_FUNCTION(aop_add_after_throwing)
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
-	//parse prameters
+	// Parse parameters
 	ZEND_PARSE_PARAMETERS_START(2, 2)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
@@ -532,31 +585,33 @@ PHP_FUNCTION(aop_add_after_throwing)
 	}
 	add_pointcut(fci, fci_cache, selector, AOP_KIND_AFTER | AOP_KIND_CATCH);
 }
-/*}}}*/
 
-/* {{{ aop_functions[]
+/**
+ * All global functions
  */
 const zend_function_entry aop_functions[] = {
-	PHP_FE(aop_add_before,  arginfo_aop_add)
-	PHP_FE(aop_add_around,  arginfo_aop_add)
-	PHP_FE(aop_add_after,  arginfo_aop_add)
-	PHP_FE(aop_add_after_returning,  arginfo_aop_add)
+	PHP_FE(aop_add_before,          arginfo_aop_add)
+	PHP_FE(aop_add_around,          arginfo_aop_add)
+	PHP_FE(aop_add_after,           arginfo_aop_add)
+	PHP_FE(aop_add_after_returning, arginfo_aop_add)
 	PHP_FE(aop_add_after_throwing,  arginfo_aop_add)
 	PHP_FE_END  /* Must be the last line in aop_functions[] */
 };
-/* }}} */
 
-/* {{{ aop_module_entry
+/**
+ * The module entry point
+ *
+ * @see https://www.phpinternalsbook.com/php7/extensions_design/php_lifecycle.html#the-php-extensions-hooks
  */
 zend_module_entry aop_module_entry = {
     STANDARD_MODULE_HEADER,
     "aop",
     aop_functions,
-    PHP_MINIT(aop),
-    PHP_MSHUTDOWN(aop),
-    PHP_RINIT(aop),     /* Replace with NULL if there's nothing to do at request start */
-    PHP_RSHUTDOWN(aop), /* Replace with NULL if there's nothing to do at request end */
-    PHP_MINFO(aop),
+    PHP_MINIT(aop),     // Module initialization
+    PHP_MSHUTDOWN(aop), // Module termination
+    PHP_RINIT(aop),     // Request initialization
+    PHP_RSHUTDOWN(aop), // Request termination
+    PHP_MINFO(aop),     // Module info
 	PHP_AOP_VERSION,
 	PHP_MODULE_GLOBALS(aop),
 	NULL,
@@ -564,7 +619,6 @@ zend_module_entry aop_module_entry = {
 	NULL,
 	STANDARD_MODULE_PROPERTIES_EX
 };
-/* }}} */
 
 #ifdef COMPILE_DL_AOP
 #ifdef ZTS
@@ -572,13 +626,3 @@ ZEND_TSRMLS_CACHE_DEFINE()
 #endif
 ZEND_GET_MODULE(aop)
 #endif
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
- */
-
