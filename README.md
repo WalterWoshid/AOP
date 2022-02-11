@@ -84,6 +84,15 @@ Docker shell scripts (from outside the container):
 
 ---
 
+## Testing ##
+
+To run tests, either run `make test`, `php run-tests.php` or `bin/test.sh`
+
+The tests are using the tmp-php.ini file, which makes some tests fail. If you want to run the tests 
+with `php run-tests.php -c /etc/php/8.1/cli/php.ini` and pass your php.ini
+
+---
+
 ## What is AOP ? Basic tutorial ##
 
 Let's assume the following class
