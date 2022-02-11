@@ -1,4 +1,10 @@
-# This is a continuation of the original AOP PECL extension for PHP 8.1+
+# This is a continuation of the original AOP PECL extension for PHP 8.1+ #
+
+---
+
+# [Current status: Not working - WIP](https://github.com/WalterWoshid/AOP/issues/1) #
+
+---
 
 # Introduction #
 
@@ -9,15 +15,19 @@ The AOP extension is designed to be the easiest way you can think of for integra
 
 AOP aims to allow separation of cross-cutting concerns (cache, log, security, transactions, ...)
 
-[![Build Status](https://travis-ci.com/WalterWoshid/AOP.svg?branch=master)](https://travis-ci.com/WalterWoshid/AOP)
+[//]: # ([![Build Status]&#40;https://travis-ci.com/WalterWoshid/AOP.svg?branch=master&#41;]&#40;https://travis-ci.com/WalterWoshid/AOP&#41;)
+
+---
 
 ## Requirements ##
 
 - PHP 8.1 or later
 
-## Installation ##
+---
 
-Download the AOP from github, compile and add the extension to your php.ini
+## Installation - Default ##
+
+Download the AOP from Github, compile and add the extension to your php.ini
 
 ```sh
     #Clone the repository on your computer
@@ -40,26 +50,60 @@ Now you can add the following line to your php.ini to enables AOP
     extension=aop.so
 ```
 
+Or you can run the install.sh script
+```sh
+    bin/install.sh
+```
+
+
+
+## Installation - Docker ##
+
+Docker-compose:
+- Start the docker containers - `docker-compose up`
+- Enter the container with bash - `docker-compose exec aop bash`
+
+Docker shell scripts (from outside the container):
+- Start the docker containers - `bin/docker/start.sh`
+- Enter the container with bash - `bin/docker/bash.sh`
+- Build the extension and install - `bin/docker/build.sh`
+- Stop the docker containers - `bin/docker/stop.sh`
+- Run a php command inside the container - `bin/docker/php.sh <command>`
+- Execute a command inside the container - `bin/docker/exec.sh <command>`
+
+---
+
+## More shell scripts ##
+
+- `bin/build.sh` - Build the extension
+- `bin/install.sh` - Install the extension
+- `bin/build-install.sh` - Build and install the extension
+- `bin/clean.sh` - Clean the extension
+- `bin/install-dependencies.sh` - Install the dependencies **(phpize & make)**
+- `bin/test.sh` - Run the tests
+
+---
+
 ## What is AOP ? Basic tutorial ##
 
 Let's assume the following class
 
-``` php
+```php
 <?php
-    class MyServices
-    {
-       public function doAdminStuff1 ()
-       {
-          //some stuff only the admin should do
-          echo "Calling doAdminStuff1";
-       }
 
-       public function doAdminStuff2 ()
-       {
-          //some stuff only the admin should do
-          echo "Calling doAdminStuff2";
-       }
-    }
+class MyServices {
+
+   public function doAdminStuff1() {
+      // Some stuff only the admin should do
+      echo "Calling doAdminStuff1";
+   }
+
+   public function doAdminStuff2() {
+      // Some stuff only the admin should do
+      echo "Calling doAdminStuff2";
+   }
+   
+}
 ```
 
 Now you want your code to be safe, you don't want non admin users to be able to call doAdminMethods.
@@ -81,14 +125,14 @@ MyServices's admin methods.
 
 So let's first write the rule needed to check if we can or cannot access the admin services.
 
-``` php
+```php
 <?php
-    function adviceForDoAdmin ()
-    {
-       if ((! isset($_SESSION['user_type'])) || ($_SESSION['user_type'] !== 'admin')) {
-          throw new Exception('Sorry, you should be an admin to do this');
-       }
-    }
+
+function adviceForDoAdmin() {
+   if ((!isset($_SESSION['user_type'])) || ($_SESSION['user_type'] !== 'admin')) {
+      throw new Exception('Sorry, you should be an admin to do this');
+   }
+}
 ```
 
 Dead simple : we check the current PHP session to see if there is something telling us the current user is an admin (Of
@@ -96,9 +140,9 @@ course we do realize that you may have more complex routines to do that, be we'l
 
 Now, let's use AOP to tell PHP to execute this method "before" any execution of admin methods.
 
-``` php
+```php
 <?php
-    aop_add_before('MyServices->doAdmin*()', 'adviceForDoAdmin');
+aop_add_before('MyServices->doAdmin*()', 'adviceForDoAdmin');
 ```
 
 Now, each time you'll invoke a method of an object of the class MyServices, starting by doAdmin, AOP will launch the function
@@ -108,28 +152,30 @@ That's it, simple ain't it ?
 
 Now le's try the examples :
 
-``` php
+```php
 <?php
-    //session is started and we added the above examples to configure MyServices & basicAdminChecker
+//session is started and we added the above examples to configure MyServices & basicAdminChecker
 
-    $services = new MyServices();
-    try {
-       $services->doAdminStuff1();//will raise an exception as nothing in the current session tells us we are an admin
-    } catch (Exception $e) {
-       echo "You cannot access the service, you're not an admin";
-    }
+$services = new MyServices();
+try {
+   $services->doAdminStuff1(); // Will raise an exception as nothing in the current session tells us we are an admin
+} catch (Exception $e) {
+   echo "You cannot access the service, you're not an admin";
+}
 
-    $_SESSION['user_type'] = 'admin';//again, this is ugly for the sake of the example
+$_SESSION['user_type'] = 'admin'; // Again, this is ugly for the sake of the example
 
-    try {
-       $service->doAdminStuff1();
-       $service->doAdminStuff2();
-    } catch (Exception $e) {
-       //nothing will be caught here, we are an admin
-    }
+try {
+   $service->doAdminStuff1();
+   $service->doAdminStuff2();
+} catch (Exception $e) {
+   // Nothing will be caught here, we are an admin
+}
 ```
 
 Here you are, you know the basics of AOP.
+
+---
 
 ## AOP Vocabulary and PHP's AOP capabilities ##
 
@@ -164,6 +210,8 @@ In PHP's AOP extension, pointcuts can be configured with a quite simple and stra
 In our first example the pointcut was "MyServices->doAdmin*()" and was configured to launch the advice "before" the
 execution of the matching methods join points.
 
+---
+
 ## Why or should I use AOP? ##
 
 AOP is a whole different way of thinking for developing application. It is as different as object oriented programming
@@ -175,6 +223,8 @@ a given user, a given context, a given procedure. A world where you can hunt wei
  trying to update multiple and sparse PHP files, but just by adding advices on given conditions.
 
 We are sure that this extension will soon be part of your future development workflow!
+
+---
 
 ### THANKS
 stealth35 (Windows build)

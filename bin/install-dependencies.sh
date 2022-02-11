@@ -3,4 +3,4 @@
 set -e
 
 # Install the dependencies
-sudo apt-get install php8.1-dev
+sudo apt-get update && apt-get install php8.1-dev

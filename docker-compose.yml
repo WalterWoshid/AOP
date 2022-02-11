@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  aop:
+    image: thecodingmachine/php:8.1-v4-fpm
+    build:
+      dockerfile: dockerfile
+    volumes:
+      - .:/opt/aop
+    working_dir: /opt/aop
+    environment:
+      PHP_EXTENSION_XDEBUG: 1
