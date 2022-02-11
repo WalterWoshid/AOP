@@ -13,9 +13,7 @@ AOP aims to allow separation of cross-cutting concerns (cache, log, security, tr
 
 ## Requirements ##
 
-- Version 2.x : PHP 8.1 or later
-- Version 1.x : PHP 7.0 or later
-- Version 0.x : PHP 5.5 or earlier
+- PHP 8.1 or later
 
 ## Installation ##
 
