@@ -41,15 +41,17 @@ missing
 mkinstalldirs
 run-tests.php
 tmp-php.ini
+travis.log
 
+*.cbp
+*.dep
 *.la
 *.lo
-*.swp
-*~
 *.opensdf
 *.sdf
 *.sln
+*.swp
 *.v11.suo
 *.vcxproj
 *.vcxproj.filters
-*.dep
+*~
