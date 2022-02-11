@@ -1,5 +1,5 @@
 --TEST--
-Herited class is caught (with selector on child)
+Inherited class is caught (with selector on child)
 --FILE--
 <?php 
 

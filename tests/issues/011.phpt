@@ -1,5 +1,5 @@
 --TEST--
-Issue 58 on GitHub
+Issue 58 https://github.com/AOP-PHP/AOP/issues/58
 --FILE--
 <?php
 

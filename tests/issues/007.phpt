@@ -1,5 +1,5 @@
 --TEST--
-private method and properties in parent class
+Private method and properties in parent class
 --FILE--
 <?php
 

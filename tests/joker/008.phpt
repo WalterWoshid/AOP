@@ -1,5 +1,5 @@
 --TEST--
-Joker at the begining
+Joker at the beginning
 --FILE--
 <?php 
 

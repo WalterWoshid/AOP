@@ -1,5 +1,5 @@
 --TEST--
-args overload arguments call (try in the second around declared)
+Args overload arguments call (try in the second around declared)
 --FILE--
 <?php 
 

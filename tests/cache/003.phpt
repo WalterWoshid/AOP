@@ -1,5 +1,5 @@
 --TEST--
-Test if handle number is enought and realloc if problem
+Test if handle number is enough and realloc if problem
 --FILE--
 <?php 
 

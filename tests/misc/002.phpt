@@ -1,5 +1,5 @@
 --TEST--
-Using a variable as a selector and updating its value.
+Using a variable as a selector and updating its value
 --FILE--
 <?php 
 class mytest {

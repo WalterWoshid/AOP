@@ -1,5 +1,5 @@
 --TEST--
-aop_add_after_returning triggers only when functions / methods ends properly
+aop_add_after_throwing triggers only when functions / methods ends properly
 --FILE--
 <?php
 function doStuff () {

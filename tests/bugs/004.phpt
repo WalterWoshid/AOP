@@ -1,5 +1,5 @@
 --TEST--
-aop on private property
+AOP on private property
 --FILE--
 <?php
 

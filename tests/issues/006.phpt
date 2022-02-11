@@ -1,5 +1,5 @@
 --TEST--
-extract symbol table reset after method call
+Extract symbol table reset after method call
 --FILE--
 <?php 
 class test {

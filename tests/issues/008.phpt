@@ -1,5 +1,5 @@
 --TEST--
-Issue 34
+Issue 34 https://github.com/AOP-PHP/AOP/issues/34
 --FILE--
 <?php
 function function1() {

@@ -1,5 +1,5 @@
 --TEST--
-Using a variable as a selector and unsetting it.
+Using a variable as a selector and unsetting it
 --FILE--
 <?php 
 class mytest {

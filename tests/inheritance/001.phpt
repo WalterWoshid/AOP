@@ -1,5 +1,5 @@
 --TEST--
-Not Parent class, not caucht
+Not Parent class, not caught
 --FILE--
 <?php 
 
