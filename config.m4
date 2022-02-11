@@ -1,7 +1,11 @@
+dnl config.m4 for extension aop
+
+dnl Comments in this file start with the string 'dnl'
+
 PHP_ARG_ENABLE(AOP, whether to enable AOP support,
 [ --enable-AOP   Enable AOP support])
 
-if test "$PHP_AOP" = "yes"; then
+if test "$PHP_AOP" != "no"; then
   AC_DEFINE(HAVE_AOP, 1, [aop])
 
   aop_sources="php8/aop.c php8/aop_execute.c php8/aop_joinpoint.c php8/lexer.c"
