@@ -15,7 +15,7 @@ The AOP extension is designed to be the easiest way you can think of for integra
 
 AOP aims to allow separation of cross-cutting concerns (cache, log, security, transactions, ...)
 
-[//]: # ([![Build Status]&#40;https://travis-ci.com/WalterWoshid/AOP.svg?branch=master&#41;]&#40;https://travis-ci.com/WalterWoshid/AOP&#41;)
+[Check out the wiki pages for more information, guides and information](../wiki)
 
 ---
 
@@ -27,32 +27,36 @@ AOP aims to allow separation of cross-cutting concerns (cache, log, security, tr
 
 ## Installation - Default ##
 
-Download the AOP from Github, compile and add the extension to your php.ini
+Download the AOP from GitHub, compile and add the extension to your php.ini
 
 ```sh
-    #Clone the repository on your computer
-    git clone https://github.com/AOP-PHP/AOP
-    cd AOP
-    #prepare the package, you will need to have development tools for php
-    phpize
-    #compile the package
-    ./configure
-    make
-    #before the installation, check that it works properly
-    make test
-    #install
-    make install
+# Clone the repository on your computer
+git clone https://github.com/AOP-PHP/AOP
+cd AOP
+
+# Prepare the package, you will need to have development tools for php
+phpize
+
+# Compile the package
+./configure
+make
+
+# Before the installation, check that it works properly
+make test
+
+# Install
+make install
 ```
 
 Now you can add the following line to your php.ini to enables AOP
 
 ```ini
-    extension=aop.so
+extension=aop.so
 ```
 
 Or you can run the install.sh script
 ```sh
-    bin/install.sh
+bin/install.sh
 ```
 
 
@@ -100,18 +104,19 @@ Let's assume the following class
 ```php
 <?php
 
-class MyServices {
-
-   public function doAdminStuff1() {
+class MyServices 
+{
+   public function doAdminStuff1() 
+   {
       // Some stuff only the admin should do
       echo "Calling doAdminStuff1";
    }
 
-   public function doAdminStuff2() {
+   public function doAdminStuff2() 
+   {
       // Some stuff only the admin should do
       echo "Calling doAdminStuff2";
    }
-   
 }
 ```
 
@@ -137,7 +142,8 @@ So let's first write the rule needed to check if we can or cannot access the adm
 ```php
 <?php
 
-function adviceForDoAdmin() {
+function adviceForDoAdmin() 
+{
    if ((!isset($_SESSION['user_type'])) || ($_SESSION['user_type'] !== 'admin')) {
       throw new Exception('Sorry, you should be an admin to do this');
    }
@@ -163,7 +169,7 @@ Now le's try the examples :
 
 ```php
 <?php
-//session is started and we added the above examples to configure MyServices & basicAdminChecker
+// Session is started and we added the above examples to configure MyServices & basicAdminChecker
 
 $services = new MyServices();
 try {
@@ -202,17 +208,17 @@ Join points are places where we can attach advices.
 
 In PHP's AOP extension, a join point can be:
 
-*    before any method / function call
-*    after any method / function call
-*    around any method / function call
-*    During the arousing of an exception of any method / function
-*    after any method / function call, should the method terminate normally or not (triggers an exception or not)
+* before any method / function call
+* after any method / function call
+* around any method / function call
+* During the arousing of an exception of any method / function
+* after any method / function call, should the method terminate normally or not (triggers an exception or not)
 
 In our first example, we used a "before" join point.
 
 ### Pointcut ###
 
-Pointcuts are a way to describe whether or not a given join point will trigger the execution of an advice.
+Pointcuts are a way to describe whether a given join point will trigger the execution of an advice.
 
 In PHP's AOP extension, pointcuts can be configured with a quite simple and straightforward syntax.
 
@@ -223,15 +229,29 @@ execution of the matching methods join points.
 
 ## Why or should I use AOP? ##
 
-AOP is a whole different way of thinking for developing application. It is as different as object oriented programming
+AOP is a whole different way of thinking for developing application. It is as different as object-oriented programming
  can be opposed to procedural programming.
 
 Event if you don't want to base your future development on this approach, you may find it very useful for debugging
-purposes. Imagine a world where you can debug or get informations on your code based on information only collected for
+purposes. Imagine a world where you can debug or get information on your code based on information only collected for
 a given user, a given context, a given procedure. A world where you can hunt weird and old code execution without even
  trying to update multiple and sparse PHP files, but just by adding advices on given conditions.
 
 We are sure that this extension will soon be part of your future development workflow!
+
+---
+
+## PHP's AOP extension history ##
+
+The AOP extension is a project which started a while ago even if its development is quite very new (early 2012). 
+It was first expected to be a fully PHP developed library, as part of a dependency injection framework. 
+The Aspect Oriented Programming implementation would have taken the form of auto generated proxies.
+
+That was before Julien Salleyron, the lead developer of the project, wanted to take it to the next level while 
+writing the AOP core features as a PHP's extension.
+
+Gérald Croës also belongs to the initial team, mainly in charge of the documentation and discussions about 
+the extension's API.
 
 ---
 
