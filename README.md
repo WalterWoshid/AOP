@@ -15,7 +15,7 @@ The AOP extension is designed to be the easiest way you can think of for integra
 
 AOP aims to allow separation of cross-cutting concerns (cache, log, security, transactions, ...)
 
-[Check out the wiki pages for more information, guides and information](../wiki)
+[Check out the wiki pages for more information, guides and information](../../wiki)
 
 ---
 
