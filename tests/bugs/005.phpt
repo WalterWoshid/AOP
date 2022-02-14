@@ -3,7 +3,7 @@ Try using finfo_open
 --SKIPIF--
 <?php
 if (!function_exists('finfo_open')) {
-    die ('You need finfo');
+    die ('Skipped: You need finfo');
 }
 ?>
 --FILE--
