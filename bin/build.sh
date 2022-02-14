@@ -7,6 +7,9 @@ phpize --clean
 phpize
 
 # Compile the package
-./configure
+./configure "$@"
 make clean
 make
+
+# Enable with debug symbols
+# ./configure --enable-debug=yes
