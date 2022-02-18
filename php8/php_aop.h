@@ -18,12 +18,13 @@
 
 /* $Id$ */
 
-// Ignore unused macros
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCUnusedMacroInspection"
-
 #ifndef PHP_AOP_H
 #define PHP_AOP_H
+
+// Ignore unused macros
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
 
 extern zend_module_entry aop_module_entry;
 #define phpext_aop_ptr &aop_module_entry
@@ -42,57 +43,74 @@ extern zend_module_entry aop_module_entry;
 #include "TSRM.h"
 #endif
 
-
 #define AOP_G(v) ZEND_MODULE_GLOBALS_ACCESSOR(aop, v)
 
-#define AOP_KIND_AROUND		1
-#define AOP_KIND_BEFORE		2
-#define AOP_KIND_AFTER		4
-#define AOP_KIND_READ		8
-#define AOP_KIND_WRITE 		16
-#define AOP_KIND_PROPERTY	32
-#define AOP_KIND_METHOD		64
-#define AOP_KIND_FUNCTION	128
-#define AOP_KIND_CATCH		256
-#define AOP_KIND_RETURN		512
+/**
+ * <h1>Types of pointcuts for bitwise operations</h1>
+ */
+typedef enum pointcut_type {
+    AOP_KIND_NONE     = 0,
 
-#define AOP_KIND_AROUND_READ_PROPERTY (AOP_KIND_AROUND+AOP_KIND_READ+AOP_KIND_PROPERTY)
-#define AOP_KIND_AROUND_WRITE_PROPERTY (AOP_KIND_AROUND+AOP_KIND_WRITE+AOP_KIND_PROPERTY)
-#define AOP_KIND_BEFORE_READ_PROPERTY (AOP_KIND_BEFORE+AOP_KIND_READ+AOP_KIND_PROPERTY)
-#define AOP_KIND_BEFORE_WRITE_PROPERTY (AOP_KIND_BEFORE+AOP_KIND_WRITE+AOP_KIND_PROPERTY)
-#define AOP_KIND_AFTER_READ_PROPERTY (AOP_KIND_AFTER+AOP_KIND_READ+AOP_KIND_PROPERTY)
-#define AOP_KIND_AFTER_WRITE_PROPERTY (AOP_KIND_AFTER+AOP_KIND_WRITE+AOP_KIND_PROPERTY)
+    AOP_KIND_AROUND   = 1,
+    AOP_KIND_BEFORE   = 2,
+    AOP_KIND_AFTER    = 4,
 
-#define AOP_KIND_AROUND_METHOD (AOP_KIND_AROUND+AOP_KIND_METHOD)
-#define AOP_KIND_AROUND_FUNCTION (AOP_KIND_AROUND+AOP_KIND_FUNCTION)
-#define AOP_KIND_BEFORE_METHOD (AOP_KIND_BEFORE+AOP_KIND_METHOD)
-#define AOP_KIND_BEFORE_FUNCTION (AOP_KIND_BEFORE+AOP_KIND_FUNCTION)
-#define AOP_KIND_AFTER_METHOD (AOP_KIND_AFTER+AOP_KIND_METHOD)
-#define AOP_KIND_AFTER_FUNCTION (AOP_KIND_AFTER+AOP_KIND_FUNCTION)
+    AOP_KIND_READ     = 8,
+    AOP_KIND_WRITE    = 16,
+    AOP_KIND_PROPERTY = 32,
+    AOP_KIND_METHOD   = 64,
+    AOP_KIND_FUNCTION = 128,
+
+    // Method + function
+    AOP_KIND_METHOD_FUNCTION = 192,
+
+    // Read + write + property + method + function
+    AOP_KIND_ALL = 248,
+    AOP_KIND_ALL_AROUND = 249,
+    AOP_KIND_ALL_BEFORE = 250,
+    AOP_KIND_ALL_AFTER  = 252,
+
+    AOP_KIND_CATCH    = 256,
+    AOP_KIND_RETURN   = 512,
+
+    AOP_KIND_AROUND_READ_PROPERTY  = 41,
+    AOP_KIND_AROUND_WRITE_PROPERTY = 49,
+    AOP_KIND_BEFORE_READ_PROPERTY  = 42,
+    AOP_KIND_BEFORE_WRITE_PROPERTY = 50,
+    AOP_KIND_AFTER_READ_PROPERTY   = 44,
+    AOP_KIND_AFTER_WRITE_PROPERTY  = 52,
+
+    AOP_KIND_AROUND_METHOD   = 65,
+    AOP_KIND_AROUND_FUNCTION = 129,
+    AOP_KIND_BEFORE_METHOD   = 66,
+    AOP_KIND_BEFORE_FUNCTION = 130,
+    AOP_KIND_AFTER_METHOD    = 68,
+    AOP_KIND_AFTER_FUNCTION  = 132,
+} pointcut_type;
 
 typedef struct {
 	int scope;
 	int static_state;
 
 	zend_string *class_name;
-	int class_jok;
+	int class_name_has_wildcard;
 	
-	zend_string *method;
-	int method_jok;
+	zend_string *method_name;
+	int method_name_has_wildcard;
 	
 	zend_string *selector;
-	int kind_of_advice;
-	zend_fcall_info fci;
-	zend_fcall_info_cache fci_cache;
+	pointcut_type kind_of_advice;
+	zend_fcall_info fcall_info;
+	zend_fcall_info_cache fcall_info_cache;
 	
 	pcre2_code *re_method;
 	pcre2_code *re_class;
 } pointcut;
 
 typedef struct {
-    zend_array *ht;
+    zend_array *hash_table;
     int version;
-    zend_class_entry *ce;
+    zend_class_entry *class_entry;
 } pointcut_cache;
 
 typedef struct {
@@ -102,9 +120,12 @@ typedef struct {
 } object_cache;
 
 ZEND_BEGIN_MODULE_GLOBALS(aop)
+    // If AOP is enabled in the ini (aop.enabled)
 	zend_bool aop_enable;
 	zend_array *pointcuts_table;
 	int pointcut_version;
+
+    // We set this to 1 when we execute an internal function that is not aop-able
 	int overloaded;
 
 	zend_array *function_cache;
@@ -124,7 +145,7 @@ ZEND_API void (*original_zend_execute_internal)(zend_execute_data *execute_data,
 ZEND_API void aop_execute_ex(zend_execute_data *execute_data);
 ZEND_API void aop_execute_internal(zend_execute_data *execute_data, zval *return_value);
 
-void do_func_execute(HashPosition pos, zend_array *pointcut_table, zend_execute_data *ex, zval *object);
+void do_func_execute(HashPosition pos, zend_array *pointcut_table, zend_execute_data *ex, zval *aop_object);
 void do_read_property(HashPosition pos, zend_array *pointcut_table, zval *aop_object);
 void do_write_property(HashPosition pos, zend_array *pointcut_table, zval *aop_object);
 

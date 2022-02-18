@@ -37,46 +37,71 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_aop_add, 0, 0, 2)
 	ZEND_ARG_INFO(0, advice)
 ZEND_END_ARG_INFO()
 
-void make_regexp_on_pointcut(pointcut *pc)
+/**
+ * Convert wildcards to regexp
+ *
+ * @param pc
+ */
+void add_regexp_from_wildcard(pointcut *pc)
 {
-	uint32_t preg_options = 0;
-	zend_string *regexp;
-	zend_string *regexp_buffer = NULL;
-	zend_string *regexp_tmp = NULL;
-	char tempregexp[500];
+	pc->method_name_has_wildcard = (strchr(ZSTR_VAL(pc->method_name), '*') != NULL);
 
-	pc->method_jok = (strchr(ZSTR_VAL(pc->method), '*') != NULL);
+    zend_string *regexp_buffer = php_str_to_str(
+            ZSTR_VAL(pc->method_name), ZSTR_LEN(pc->method_name),
+            "**\\", 3,
+            "[.#}", 4
+    );
 
-	regexp_buffer = php_str_to_str(ZSTR_VAL(pc->method), ZSTR_LEN(pc->method), "**\\", 3, "[.#}", 4);
-	
-	regexp_tmp = regexp_buffer;
-	regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "**", 2, "[.#]", 4);
+    zend_string *regexp_tmp = regexp_buffer;
+	regexp_buffer = php_str_to_str(
+        ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+        "**", 2,
+        "[.#]", 4
+    );
 	zend_string_release(regexp_tmp);
 
 	regexp_tmp = regexp_buffer;
-	regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "\\", 1, "\\\\", 2);
-	zend_string_release(regexp_tmp);
-	
-	regexp_tmp = regexp_buffer;
-	regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "*", 1, "[^\\\\]*", 6);
-	zend_string_release(regexp_tmp);
-
-	regexp_tmp = regexp_buffer;
-	regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "[.#]", 4, ".*", 2);
+	regexp_buffer = php_str_to_str(
+        ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+        "\\", 1,
+        "\\\\", 2
+    );
 	zend_string_release(regexp_tmp);
 	
 	regexp_tmp = regexp_buffer;
-	regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "[.#}", 4, "(.*\\\\)?", 7);
+	regexp_buffer = php_str_to_str(
+        ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+        "*", 1,
+        "[^\\\\]*", 6
+    );
 	zend_string_release(regexp_tmp);
 
+	regexp_tmp = regexp_buffer;
+	regexp_buffer = php_str_to_str(
+        ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+        "[.#]", 4,
+        ".*", 2
+    );
+	zend_string_release(regexp_tmp);
+	
+	regexp_tmp = regexp_buffer;
+	regexp_buffer = php_str_to_str(
+        ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+        "[.#}", 4,
+        "(.*\\\\)?", 7
+    );
+	zend_string_release(regexp_tmp);
+
+    char tempregexp[500];
     if (ZSTR_VAL(regexp_buffer)[0] != '\\') {
-        sprintf((char *)tempregexp, "/^%s$/i", ZSTR_VAL(regexp_buffer));
+        sprintf((char *) tempregexp, "/^%s$/i", ZSTR_VAL(regexp_buffer));
     } else {
-        sprintf((char *)tempregexp, "/^%s$/i", ZSTR_VAL(regexp_buffer) + 2);
+        sprintf((char *) tempregexp, "/^%s$/i", ZSTR_VAL(regexp_buffer) + 2);
     }
 	zend_string_release(regexp_buffer);
 
-	regexp = zend_string_init(tempregexp, strlen(tempregexp), 0);
+    zend_string *regexp = zend_string_init(tempregexp, strlen(tempregexp), 0);
+    uint32_t preg_options = 0;
 	pc->re_method = pcre_get_compiled_regex(regexp, &preg_options);
 	zend_string_release(regexp);	
 
@@ -85,32 +110,56 @@ void make_regexp_on_pointcut(pointcut *pc)
     }
 
 	if (pc->class_name != NULL) {
-		regexp_buffer = php_str_to_str(ZSTR_VAL(pc->class_name), ZSTR_LEN(pc->class_name), "**\\", 3, "[.#}", 4);
+		regexp_buffer = php_str_to_str(
+            ZSTR_VAL(pc->class_name), ZSTR_LEN(pc->class_name),
+            "**\\", 3,
+            "[.#}", 4
+        );
 		
 		regexp_tmp = regexp_buffer;
-		regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "**", 2, "[.#]", 4);
+		regexp_buffer = php_str_to_str(
+            ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+            "**", 2,
+            "[.#]", 4
+        );
 		zend_string_release(regexp_tmp);
 		
 		regexp_tmp = regexp_buffer;
-		regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "\\", 1, "\\\\", 2);
+		regexp_buffer = php_str_to_str(
+            ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+            "\\", 1,
+            "\\\\", 2
+        );
 		zend_string_release(regexp_tmp);
 		
 		regexp_tmp = regexp_buffer;
-		regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "*", 1, "[^\\\\]*", 6);
+		regexp_buffer = php_str_to_str(
+            ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+            "*", 1,
+            "[^\\\\]*", 6
+        );
 		zend_string_release(regexp_tmp);
 		
 		regexp_tmp = regexp_buffer;
-		regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "[.#]", 4, ".*", 2);
+		regexp_buffer = php_str_to_str(
+            ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+            "[.#]", 4,
+            ".*", 2
+        );
 		zend_string_release(regexp_tmp);
 		
 		regexp_tmp = regexp_buffer;
-		regexp_buffer = php_str_to_str(ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer), "[.#}", 4, "(.*\\\\)?", 7);
+		regexp_buffer = php_str_to_str(
+            ZSTR_VAL(regexp_tmp), ZSTR_LEN(regexp_buffer),
+            "[.#}", 4,
+            "(.*\\\\)?", 7
+        );
 		zend_string_release(regexp_tmp);
 
 		if (ZSTR_VAL(regexp_buffer)[0] != '\\') {
-			sprintf((char *)tempregexp, "/^%s$/i", ZSTR_VAL(regexp_buffer));
+			sprintf((char *) tempregexp, "/^%s$/i", ZSTR_VAL(regexp_buffer));
 		} else {
-			sprintf((char *)tempregexp, "/^%s$/i", ZSTR_VAL(regexp_buffer) + 2);
+			sprintf((char *) tempregexp, "/^%s$/i", ZSTR_VAL(regexp_buffer) + 2);
 		}
 		zend_string_release(regexp_buffer);
 
@@ -126,16 +175,16 @@ void make_regexp_on_pointcut(pointcut *pc)
 
 static pointcut *alloc_pointcut()
 {
-    pointcut *pc = (pointcut *)emalloc(sizeof(pointcut));
+    pointcut *pc = (pointcut *) emalloc(sizeof(pointcut));
 
     pc->scope = 0;
     pc->static_state = 2;
-    pc->method_jok = 0;
-    pc->class_jok = 0;
+    pc->method_name_has_wildcard = 0;
+    pc->class_name_has_wildcard = 0;
     pc->class_name = NULL;
-    pc->method = NULL;
+    pc->method_name = NULL;
     pc->selector = NULL;
-    pc->kind_of_advice = 0;
+    pc->kind_of_advice = AOP_KIND_NONE;
     // pc->fci = NULL;
     // pc->fcic = NULL;
     pc->re_method = NULL;
@@ -151,12 +200,12 @@ static void free_pointcut(zval *elem)
 		return;
 	}
 
-	if (&(pc->fci.function_name)) {
-		zval_ptr_dtor(&pc->fci.function_name);
+	if (&(pc->fcall_info.function_name)) {
+		zval_ptr_dtor(&pc->fcall_info.function_name);
 	}
 
-	if (pc->method != NULL) {
-		zend_string_release(pc->method);
+	if (pc->method_name != NULL) {
+		zend_string_release(pc->method_name);
 	}
 	if (pc->class_name != NULL) {
 		zend_string_release(pc->class_name);
@@ -167,51 +216,66 @@ static void free_pointcut(zval *elem)
 void free_pointcut_cache(zval *elem)
 {
     pointcut_cache *cache = (pointcut_cache *) Z_PTR_P(elem);
-    if (cache->ht != NULL) {
-        zend_hash_destroy(cache->ht);
-        FREE_HASHTABLE(cache->ht);
+    if (cache->hash_table != NULL) {
+        zend_hash_destroy(cache->hash_table);
+        FREE_HASHTABLE(cache->hash_table);
     }
 	efree(cache);
 }
 
-static void add_pointcut(zend_fcall_info fci, zend_fcall_info_cache fci_cache, zend_string *selector, int cut_type)
-{
-	zval pointcut_val;
-	pointcut *pc = NULL;
-	char *temp_str = NULL;
-	int is_class = 0;
-	scanner_state *state;
-	scanner_token *token;
-
+/**
+ * <h1>Add a new pointcut</h1>
+ *
+ * Pointcuts are a way to describe whether or not a given join point will trigger the execution of an advice.
+ *
+ * @param fci       Function call info
+ * @param fci_cache
+ * @param selector  Eg: "MyServices->doAdmin*()"
+ * @param cut_type  Pointcut type (before, after, around)
+ */
+static void add_pointcut(
+    zend_fcall_info fci,
+    zend_fcall_info_cache fci_cache,
+    zend_string *selector,
+    pointcut_type cut_type
+) {
 	if (ZSTR_LEN(selector) < 2) {
-		zend_error(E_ERROR, "The given pointcut is invalid. You must specify a function call, a method call or a property operation");
+		zend_error(
+            E_ERROR,
+            "The given pointcut is invalid. You must specify a function call, a method call or a property "
+            "operation"
+        );
 	}
 
-	pc = alloc_pointcut();
+    pointcut *pc = alloc_pointcut();
 	pc->selector = selector;
-	pc->fci = fci;
-	pc->fci_cache = fci_cache;
+	pc->fcall_info = fci;
+	pc->fcall_info_cache = fci_cache;
 	pc->kind_of_advice = cut_type;
 
-	state = (scanner_state *) emalloc(sizeof(scanner_state));
-	token = (scanner_token *) emalloc(sizeof(scanner_token));
-
+    // Parse the selector with lexer into smaller tokens
+    // @see php8/lexer.l
+    scanner_state *state = (scanner_state *) emalloc(sizeof(scanner_state));
+    scanner_token *token = (scanner_token *) emalloc(sizeof(scanner_token));
 	state->start = ZSTR_VAL(selector);
 	state->end = state->start;
+    char *temp_str = NULL;
+    int is_class = 0;
 	while (0 <= scan(state, token)) {
 	    // php_printf("TOKEN %d \n", token->TOKEN);
 		switch (token->TOKEN) {
 			case TOKEN_STATIC:
-				pc->static_state=token->int_val;
+				pc->static_state = token->int_val;
 				break;
 			case TOKEN_SCOPE:
 				pc->scope |= token->int_val;
 				break;
 			case TOKEN_CLASS:
-				pc->class_name = zend_string_init(temp_str, strlen(temp_str), 0); // estrdup(temp_str);
+                // estrdup(temp_str);
+				pc->class_name = zend_string_init(temp_str, strlen(temp_str), 0);
 				efree(temp_str);
-				temp_str=NULL;
-				is_class=1;
+				temp_str = NULL;
+				is_class = 1;
 				break;
 			case TOKEN_PROPERTY:
 				pc->kind_of_advice |= AOP_KIND_PROPERTY | token->int_val;
@@ -236,7 +300,7 @@ static void add_pointcut(zend_fcall_info fci, zend_fcall_info_cache fci_cache, z
 	}
 	if (temp_str != NULL) {
 		// Method or property
-		pc->method = zend_string_init(temp_str, strlen(temp_str), 0);
+		pc->method_name = zend_string_init(temp_str, strlen(temp_str), 0);
 		efree(temp_str);
 	}
 	efree(state);
@@ -247,9 +311,10 @@ static void add_pointcut(zend_fcall_info fci, zend_fcall_info_cache fci_cache, z
 		pc->kind_of_advice |= AOP_KIND_READ | AOP_KIND_WRITE | AOP_KIND_PROPERTY;
 	}
 
-	make_regexp_on_pointcut(pc);
+    add_regexp_from_wildcard(pc);
 	
 	// Insert into hashTable:AOP_G(pointcuts)
+    zval pointcut_val;
 	ZVAL_PTR(&pointcut_val, pc);
 	zend_hash_next_index_insert(AOP_G(pointcuts_table), &pointcut_val);
 	AOP_G(pointcut_version)++;
@@ -259,7 +324,15 @@ static void add_pointcut(zend_fcall_info fci, zend_fcall_info_cache fci_cache, z
  * Ini settings
  */
 PHP_INI_BEGIN()
-    STD_PHP_INI_BOOLEAN("aop.enable", "1", PHP_INI_ALL, OnUpdateBool, aop_enable, zend_aop_globals, aop_globals)
+    STD_PHP_INI_BOOLEAN(
+        "aop.enable",
+        "1",
+        PHP_INI_ALL,
+        OnUpdateBool,
+        aop_enable,
+        zend_aop_globals,
+        aop_globals
+    )
 PHP_INI_END()
 
 /**
@@ -275,27 +348,27 @@ PHP_MINIT_FUNCTION(aop)
 {
 	REGISTER_INI_ENTRIES();
 	
-	// 1. overload zend_execute_ex and zend_execute_internal (execution of functions)
+	// 1. Overload zend_execute_ex and zend_execute_internal (execution of functions)
 	original_zend_execute_ex = zend_execute_ex;
 	zend_execute_ex = aop_execute_ex;
 
 	original_zend_execute_internal = zend_execute_internal;
 	zend_execute_internal = aop_execute_internal;
 
-	// 2. overload zend_std_read_property and zend_std_write_property
-    zend_object_handlers std_object_handlers = std_object_handlers;
-	original_zend_std_read_property = std_object_handlers.read_property;
-	std_object_handlers.read_property = aop_read_property;
+	// 2. Overload zend_std_read_property and zend_std_write_property (read and write of properties)
+    zend_object_handlers std_object_handlers = *zend_get_std_object_handlers();
+    original_zend_std_read_property = std_object_handlers.read_property;
+    std_object_handlers.read_property = aop_read_property;
 
-	original_zend_std_write_property = std_object_handlers.write_property;
-	std_object_handlers.write_property = aop_write_property;
+    original_zend_std_write_property = std_object_handlers.write_property;
+    std_object_handlers.write_property = aop_write_property;
 
-	/*
+	/**
 	 * To avoid zendvm inc/dec property value directly
 	 * When get_property_ptr_ptr return NULL, zendvm will use write_property to inc/dec property value
 	 */
 	original_zend_std_get_property_ptr_ptr = std_object_handlers.get_property_ptr_ptr;
-	std_object_handlers.get_property_ptr_ptr = aop_get_property_ptr_ptr;
+    std_object_handlers.get_property_ptr_ptr = aop_get_property_ptr_ptr;
 
 	register_class_AopJoinPoint();
 
@@ -307,18 +380,18 @@ PHP_MINIT_FUNCTION(aop)
     REGISTER_LONG_CONSTANT("AOP_KIND_METHOD", AOP_KIND_METHOD, CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("AOP_KIND_READ", AOP_KIND_READ, CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("AOP_KIND_WRITE", AOP_KIND_WRITE, CONST_CS | CONST_PERSISTENT);
-    REGISTER_LONG_CONSTANT("AOP_KIND_AROUND_WRITE_PROPERTY", AOP_KIND_AROUND_WRITE_PROPERTY, CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("AOP_KIND_AROUND_READ_PROPERTY", AOP_KIND_AROUND_READ_PROPERTY, CONST_CS | CONST_PERSISTENT);
-    REGISTER_LONG_CONSTANT("AOP_KIND_BEFORE_WRITE_PROPERTY", AOP_KIND_BEFORE_WRITE_PROPERTY, CONST_CS | CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("AOP_KIND_AROUND_WRITE_PROPERTY", AOP_KIND_AROUND_WRITE_PROPERTY, CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("AOP_KIND_BEFORE_READ_PROPERTY", AOP_KIND_BEFORE_READ_PROPERTY, CONST_CS | CONST_PERSISTENT);
-    REGISTER_LONG_CONSTANT("AOP_KIND_AFTER_WRITE_PROPERTY", AOP_KIND_AFTER_WRITE_PROPERTY, CONST_CS | CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("AOP_KIND_BEFORE_WRITE_PROPERTY", AOP_KIND_BEFORE_WRITE_PROPERTY, CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("AOP_KIND_AFTER_READ_PROPERTY", AOP_KIND_AFTER_READ_PROPERTY, CONST_CS | CONST_PERSISTENT);
-    REGISTER_LONG_CONSTANT("AOP_KIND_BEFORE_METHOD", AOP_KIND_BEFORE_METHOD, CONST_CS | CONST_PERSISTENT);
-    REGISTER_LONG_CONSTANT("AOP_KIND_AFTER_METHOD", AOP_KIND_AFTER_METHOD, CONST_CS | CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("AOP_KIND_AFTER_WRITE_PROPERTY", AOP_KIND_AFTER_WRITE_PROPERTY, CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("AOP_KIND_AROUND_METHOD", AOP_KIND_AROUND_METHOD, CONST_CS | CONST_PERSISTENT);
-    REGISTER_LONG_CONSTANT("AOP_KIND_BEFORE_FUNCTION", AOP_KIND_BEFORE_FUNCTION, CONST_CS | CONST_PERSISTENT);
-    REGISTER_LONG_CONSTANT("AOP_KIND_AFTER_FUNCTION", AOP_KIND_AFTER_FUNCTION, CONST_CS | CONST_PERSISTENT);
     REGISTER_LONG_CONSTANT("AOP_KIND_AROUND_FUNCTION", AOP_KIND_AROUND_FUNCTION, CONST_CS | CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("AOP_KIND_BEFORE_METHOD", AOP_KIND_BEFORE_METHOD, CONST_CS | CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("AOP_KIND_BEFORE_FUNCTION", AOP_KIND_BEFORE_FUNCTION, CONST_CS | CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("AOP_KIND_AFTER_METHOD", AOP_KIND_AFTER_METHOD, CONST_CS | CONST_PERSISTENT);
+    REGISTER_LONG_CONSTANT("AOP_KIND_AFTER_FUNCTION", AOP_KIND_AFTER_FUNCTION, CONST_CS | CONST_PERSISTENT);
 
     return SUCCESS;
 }
@@ -348,10 +421,6 @@ PHP_MSHUTDOWN_FUNCTION(aop)
  */
 PHP_RINIT_FUNCTION(aop)
 {
-#if defined(COMPILE_DL_AOP) && defined(ZTS)
-    ZEND_TSRMLS_CACHE_UPDATE();
-#endif
-
     AOP_G(overloaded) = 0;
     AOP_G(pointcut_version) = 0;
 
@@ -363,12 +432,13 @@ PHP_RINIT_FUNCTION(aop)
 	AOP_G(lock_read_property) = 0;
 	AOP_G(lock_write_property) = 0;
 
-	// init AOP_G(pointcuts_table)
+	// Init AOP_G(pointcuts_table)
 	ALLOC_HASHTABLE(AOP_G(pointcuts_table));
 	zend_hash_init(AOP_G(pointcuts_table), 16, NULL, free_pointcut, 0);	
 
 	ALLOC_HASHTABLE(AOP_G(function_cache));
-	zend_hash_init(AOP_G(function_cache), 16, NULL, free_pointcut_cache, 0);	
+	zend_hash_init(AOP_G(function_cache), 16, NULL, free_pointcut_cache, 0);
+
     return SUCCESS;
 }
 
@@ -385,20 +455,19 @@ PHP_RSHUTDOWN_FUNCTION(aop)
 {
 	zend_array_destroy(AOP_G(pointcuts_table));
 	zend_array_destroy(AOP_G(function_cache));
-	
-	int i;
-    for (i = 0; i < AOP_G(object_cache_size); i++) {
+
+    for (int i = 0; i < AOP_G(object_cache_size); i++) {
         if (AOP_G(object_cache)[i] != NULL) {
 			object_cache *_cache = AOP_G(object_cache)[i];
-			if (_cache->write!=NULL) {
+			if (_cache->write != NULL) {
 				zend_hash_destroy(_cache->write);
 				FREE_HASHTABLE(_cache->write);
 			}
-			if (_cache->read!=NULL) {
+			if (_cache->read != NULL) {
 				zend_hash_destroy(_cache->read);
 				FREE_HASHTABLE(_cache->read);
 			}
-			if (_cache->func!=NULL) {
+			if (_cache->func != NULL) {
 				zend_hash_destroy(_cache->func);
 				FREE_HASHTABLE(_cache->func);
 			}
@@ -443,7 +512,10 @@ PHP_MINFO_FUNCTION(aop)
  */
 PHP_FUNCTION(aop_add_before)
 {
+    // Selector
 	zend_string *selector;
+
+    // Pointcut
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
@@ -452,7 +524,11 @@ PHP_FUNCTION(aop_add_before)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
 	ZEND_PARSE_PARAMETERS_END_EX(
-        zend_error(E_ERROR, "aop_add_before() expects a string for the pointcut as a first argument and a callback as a second argument");
+        zend_error(
+            E_ERROR,
+            "aop_add_before() expects a string for the pointcut as a first argument and a callback as a "
+            "second argument"
+        );
 		return;
 	);
 
@@ -474,7 +550,10 @@ PHP_FUNCTION(aop_add_before)
  */
 PHP_FUNCTION(aop_add_around)
 {
+    // Selector
 	zend_string *selector;
+
+    // Pointcut
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
@@ -483,7 +562,11 @@ PHP_FUNCTION(aop_add_around)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
 	ZEND_PARSE_PARAMETERS_END_EX(
-		zend_error(E_ERROR, "aop_add_around() expects a string for the pointcut as a first argument and a callback as a second argument");
+		zend_error(
+            E_ERROR,
+            "aop_add_around() expects a string for the pointcut as a first argument and a callback as a second "
+            "argument"
+        );
 		return;
 	);
 
@@ -505,7 +588,10 @@ PHP_FUNCTION(aop_add_around)
  */
 PHP_FUNCTION(aop_add_after)
 {
+    // Selector
 	zend_string *selector;
+
+    // Pointcut
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
@@ -514,7 +600,10 @@ PHP_FUNCTION(aop_add_after)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
 	ZEND_PARSE_PARAMETERS_END_EX(
-        zend_error(E_ERROR, "aop_add_after() expects a string for the pointcut as a first argument and a callback as a second argument");
+        zend_error(
+            E_ERROR,
+            "aop_add_after() expects a string for the pointcut as a first argument and a callback as a second argument"
+        );
 		return;
 	);
 
@@ -536,7 +625,10 @@ PHP_FUNCTION(aop_add_after)
  */
 PHP_FUNCTION(aop_add_after_returning)
 {
+    // Selector
 	zend_string *selector;
+
+    // Pointcut
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
@@ -545,7 +637,10 @@ PHP_FUNCTION(aop_add_after_returning)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
 	ZEND_PARSE_PARAMETERS_END_EX(
-        zend_error(E_ERROR, "aop_add_after() expects a string for the pointcut as a first argument and a callback as a second argument");
+        zend_error(
+            E_ERROR,
+            "aop_add_after() expects a string for the pointcut as a first argument and a callback as a second argument"
+        );
 		return;
 	);
 
@@ -567,7 +662,10 @@ PHP_FUNCTION(aop_add_after_returning)
  */
 PHP_FUNCTION(aop_add_after_throwing)
 {
+    // Selector
 	zend_string *selector;
+
+    // Pointcut
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 
@@ -576,7 +674,10 @@ PHP_FUNCTION(aop_add_after_throwing)
 		Z_PARAM_STR(selector)
 		Z_PARAM_FUNC(fci, fci_cache)
 	ZEND_PARSE_PARAMETERS_END_EX(
-        zend_error(E_ERROR, "aop_add_after() expects a string for the pointcut as a first argument and a callback as a second argument");
+        zend_error(
+            E_ERROR,
+            "aop_add_after() expects a string for the pointcut as a first argument and a callback as a second argument"
+        );
 		return;
 	);
 
@@ -595,7 +696,7 @@ const zend_function_entry aop_functions[] = {
 	PHP_FE(aop_add_after,           arginfo_aop_add)
 	PHP_FE(aop_add_after_returning, arginfo_aop_add)
 	PHP_FE(aop_add_after_throwing,  arginfo_aop_add)
-	PHP_FE_END  /* Must be the last line in aop_functions[] */
+	PHP_FE_END  // Must be the last line in aop_functions[]
 };
 
 /**
@@ -621,8 +722,5 @@ zend_module_entry aop_module_entry = {
 };
 
 #ifdef COMPILE_DL_AOP
-#ifdef ZTS
-ZEND_TSRMLS_CACHE_DEFINE()
-#endif
 ZEND_GET_MODULE(aop)
 #endif

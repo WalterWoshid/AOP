@@ -24,7 +24,7 @@ typedef struct {
     pointcut *current_pointcut;
     zend_array *advice;
     HashPosition pos;
-    int kind_of_advice;
+    pointcut_type kind_of_advice;
     zend_execute_data *ex;
     int is_ex_executed;
     zend_object *exception;
@@ -41,26 +41,26 @@ typedef struct {
     zval property_value;
 } AopJoinpoint_object;
 
-extern zend_class_entry *aop_joinpoint_ce;
+extern zend_class_entry *aop_joinpoint_class_entry;
 
 void register_class_AopJoinPoint(void);
 
-PHP_METHOD(AopJoinpoint, getArguments);     //done
-PHP_METHOD(AopJoinpoint, getPropertyName);  //done
-PHP_METHOD(AopJoinpoint, getPropertyValue); //done
-PHP_METHOD(AopJoinpoint, setArguments);     //done
-PHP_METHOD(AopJoinpoint, getKindOfAdvice);  //done
-PHP_METHOD(AopJoinpoint, getReturnedValue); //done
-PHP_METHOD(AopJoinpoint, setReturnedValue); //done
-PHP_METHOD(AopJoinpoint, getAssignedValue); //done
-PHP_METHOD(AopJoinpoint, setAssignedValue); //done
-PHP_METHOD(AopJoinpoint, getPointcut);      //done
-PHP_METHOD(AopJoinpoint, getObject);        //done
-PHP_METHOD(AopJoinpoint, getClassName);     //done
-PHP_METHOD(AopJoinpoint, getMethodName);    //done
-PHP_METHOD(AopJoinpoint, getFunctionName);  //done
-PHP_METHOD(AopJoinpoint, getException);     //done
-PHP_METHOD(AopJoinpoint, process);          //done
+PHP_METHOD(AopJoinpoint, getArguments);
+PHP_METHOD(AopJoinpoint, getPropertyName);
+PHP_METHOD(AopJoinpoint, getPropertyValue);
+PHP_METHOD(AopJoinpoint, setArguments);
+PHP_METHOD(AopJoinpoint, getKindOfAdvice);
+PHP_METHOD(AopJoinpoint, getReturnedValue);
+PHP_METHOD(AopJoinpoint, setReturnedValue);
+PHP_METHOD(AopJoinpoint, getAssignedValue);
+PHP_METHOD(AopJoinpoint, setAssignedValue);
+PHP_METHOD(AopJoinpoint, getPointcut);
+PHP_METHOD(AopJoinpoint, getObject);
+PHP_METHOD(AopJoinpoint, getClassName);
+PHP_METHOD(AopJoinpoint, getMethodName);
+PHP_METHOD(AopJoinpoint, getFunctionName);
+PHP_METHOD(AopJoinpoint, getException);
+PHP_METHOD(AopJoinpoint, process);
 
 ZEND_API void ZEND_FASTCALL _zval_dtor_func_for_ptr(zend_refcounted *p ZEND_FILE_LINE_DC);
 #define zval_dtor_func_for_ptr(zv) _zval_dtor_func_for_ptr(zv ZEND_FILE_LINE_CC)

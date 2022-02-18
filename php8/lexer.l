@@ -8,15 +8,15 @@
 int scan(scanner_state *s, scanner_token *t) {
 
 	// char *cursor = s->start;
-	int r=SCANNER_RETCODE_IMPOSSIBLE;
-	char *q=s->start;//keep initial start
+	int r = SCANNER_RETCODE_IMPOSSIBLE;
+	char *q = s->start; //keep initial start
 
 #define YYCTYPE char
 #define YYCURSOR (s->start)
 #define YYLIMIT (s->end)
 #define YYMARKER (s->marker)
 
-	while(SCANNER_RETCODE_IMPOSSIBLE == r) {
+	while (SCANNER_RETCODE_IMPOSSIBLE == r) {
 	
 		/*!re2c
 		re2c:indent:top = 2;

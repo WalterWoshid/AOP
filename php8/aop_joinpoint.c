@@ -26,7 +26,7 @@
 #include "php_aop.h"
 #include "aop_joinpoint.h"
 
-zend_class_entry *aop_joinpoint_ce;
+zend_class_entry *aop_joinpoint_class_entry;
 
 zend_object_handlers AopJoinpoint_object_handlers;
 
@@ -71,7 +71,7 @@ zend_function_entry aop_joinpoint_methods[] = {
 
 void aop_free_JoinPoint(zend_object *object)
 {
-    AopJoinpoint_object *obj = (AopJoinpoint_object *)object;
+    AopJoinpoint_object *obj = (AopJoinpoint_object *) object;
 
     if (obj->args != NULL) {
         zval_ptr_dtor(obj->args);
@@ -88,17 +88,15 @@ void aop_free_JoinPoint(zend_object *object)
     zend_object_std_dtor(object);
 }
 
-static inline void _zend_assign_to_variable_reference(zval *variable_ptr, zval *value_ptr)
+static inline void _zend_assign_to_variable_reference(zval *variable_ptr, zval *value_ptr) // NOLINT(bugprone-reserved-identifier)
 {
-    zend_reference *ref;
-
     if (EXPECTED(!Z_ISREF_P(value_ptr))) {
         ZVAL_NEW_REF(value_ptr, value_ptr);
     } else if (UNEXPECTED(variable_ptr == value_ptr)) {
         return;
     }
 
-    ref = Z_REF_P(value_ptr);
+    zend_reference *ref = Z_REF_P(value_ptr);
     if (Z_REFCOUNTED_P(variable_ptr)) {
         zend_refcounted *garbage = Z_COUNTED_P(variable_ptr);
 
@@ -117,11 +115,11 @@ static inline void _zend_assign_to_variable_reference(zval *variable_ptr, zval *
 }
 
 // new AopJoinPoint()
-zend_object *aop_create_handler_JoinPoint(zend_class_entry *ce)
+zend_object *aop_create_handler_JoinPoint(zend_class_entry *class_entry)
 {
     AopJoinpoint_object *obj = (AopJoinpoint_object *) emalloc(sizeof(AopJoinpoint_object));
     
-    zend_object_std_init(&obj->std, ce);
+    zend_object_std_init(&obj->std, class_entry);
     obj->std.handlers = &AopJoinpoint_object_handlers;
 
     return &obj->std;
@@ -129,11 +127,11 @@ zend_object *aop_create_handler_JoinPoint(zend_class_entry *ce)
 
 void register_class_AopJoinPoint(void)
 {
-    zend_class_entry ce;
-    INIT_CLASS_ENTRY(ce, "AopJoinpoint", aop_joinpoint_methods)
-    aop_joinpoint_ce = zend_register_internal_class(&ce);
+    zend_class_entry class_entry;
+    INIT_CLASS_ENTRY(class_entry, "AopJoinpoint", aop_joinpoint_methods)
+    aop_joinpoint_class_entry = zend_register_internal_class(&class_entry);
 
-    aop_joinpoint_ce->create_object = aop_create_handler_JoinPoint;
+    aop_joinpoint_class_entry->create_object = aop_create_handler_JoinPoint;
     memcpy(&AopJoinpoint_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     AopJoinpoint_object_handlers.clone_obj = NULL;
     AopJoinpoint_object_handlers.free_obj = aop_free_JoinPoint;
@@ -142,19 +140,19 @@ void register_class_AopJoinPoint(void)
 /* proto array AopJoinpoint::getArguments() */
 PHP_METHOD(AopJoinpoint, getArguments)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
 
     if (object->args == NULL) {
-        uint32_t call_num_args, first_extra_arg, i;
         zval *arg, *extra_start;
         zval *ret = emalloc(sizeof(zval));
         zend_op_array *op_array = &object->ex->func->op_array;
         
         array_init(ret);
-        
-        first_extra_arg = op_array->num_args;
-        call_num_args = ZEND_CALL_NUM_ARGS(object->ex);
 
+        uint32_t first_extra_arg = op_array->num_args;
+        uint32_t call_num_args = ZEND_CALL_NUM_ARGS(object->ex);
+
+        int i;
         if (call_num_args <= first_extra_arg) {
             for (i = 0; i < call_num_args; i++){
                 arg = ZEND_CALL_VAR_NUM(object->ex, i);
@@ -173,7 +171,7 @@ PHP_METHOD(AopJoinpoint, getArguments)
                 Z_TRY_ADDREF_P(arg);
                 zend_hash_next_index_insert(Z_ARR_P(ret), arg);
             }
-            // get extra params
+            // Get extra params
             extra_start = ZEND_CALL_VAR_NUM(object->ex, op_array->last_var + op_array->T);
             for (i = 0; i < call_num_args - first_extra_arg; i++) {
                 Z_TRY_ADDREF_P(extra_start + i);
@@ -186,13 +184,26 @@ PHP_METHOD(AopJoinpoint, getArguments)
     RETURN_ZVAL(object->args, 1, 0);
 }
 
-/* proto void AopJoinpoint::setArguments(array arguments) */
+/**
+ * AopJoinpoint::setArguments(array $arguments)
+ *
+ * Set arguments for current joinpoint
+ *
+ * @php_param array $arguments
+ *
+ * @php_return void
+ */
 PHP_METHOD(AopJoinpoint, setArguments)
 {
+    // Arguments
     zval *params;
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     if (object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY) {
-        zend_error(E_ERROR, "setArguments is only available when the JoinPoint is a function or ia method call");
+        zend_error(
+            E_ERROR,
+            "setArguments is only available when the JoinPoint is a function or a method call"
+        );
     }
 
 	ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -201,7 +212,7 @@ PHP_METHOD(AopJoinpoint, setArguments)
 
     if (object->args != NULL) {
         zval_ptr_dtor(object->args);
-    }else{
+    } else {
         object->args = emalloc(sizeof(zval));
     }
     ZVAL_COPY(object->args, params);
@@ -212,11 +223,16 @@ PHP_METHOD(AopJoinpoint, setArguments)
 /* proto mixed AopJoinpoint::getException() */
 PHP_METHOD(AopJoinpoint, getException)
 {
+    // Exception
     zval exception_val;
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     
-    if (!(object->current_pointcut->kind_of_advice & AOP_KIND_CATCH)){
-        zend_error(E_ERROR, "getException is only available when the advice was added with aop_add_after or aop_add_after_throwing"); 
+    if (!(object->current_pointcut->kind_of_advice & AOP_KIND_CATCH)) {
+        zend_error(
+            E_ERROR,
+            "getException is only available when the advice was added with aop_add_after or aop_add_after_throwing"
+        );
     }
 
     if (object->exception != NULL) {
@@ -229,44 +245,51 @@ PHP_METHOD(AopJoinpoint, getException)
 /* proto string AopJoinpoint::getPointcut() */
 PHP_METHOD(AopJoinpoint, getPointcut)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     RETURN_STR(object->current_pointcut->selector);
 }
 
 /* proto void AopJoinpoint::process() */
 PHP_METHOD(AopJoinpoint, process)
 {
-    zval call_ret;
-    int is_ret_overloaded = 0;
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
-    
-    if (!object || !object->current_pointcut || !object->current_pointcut->kind_of_advice) {
-        zend_error(E_ERROR, "Error");
+    AopJoinpoint_object *aop_object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
+
+    if (!aop_object || !aop_object->current_pointcut || !aop_object->current_pointcut->kind_of_advice) {
+        zend_error(
+            E_ERROR,
+            "Error" // todo: add error message
+        );
     }
-    if (!(object->current_pointcut->kind_of_advice & AOP_KIND_AROUND)) {
-        zend_error(E_ERROR, "process is only available when the advice was added with aop_add_around"); 
+    if (!(aop_object->current_pointcut->kind_of_advice & AOP_KIND_AROUND)) {
+        zend_error(
+            E_ERROR,
+            "Process is only available when the advice was added with aop_add_around"
+        );
     }
-    if (object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY) {
-        if (object->kind_of_advice & AOP_KIND_WRITE) {
-            do_write_property(object->pos, object->advice, getThis());
+
+    if (aop_object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY) {
+        if (aop_object->kind_of_advice & AOP_KIND_WRITE) {
+            do_write_property(aop_object->pos, aop_object->advice, getThis());
         } else {
-            do_read_property(object->pos, object->advice, getThis());
+            do_read_property(aop_object->pos, aop_object->advice, getThis());
         }
     } else {
-        if (object->ex->return_value == NULL) {
-            object->ex->return_value = &call_ret;
+        zval call_ret;
+        int is_ret_overloaded = 0;
+        if (aop_object->ex->return_value == NULL) {
+            aop_object->ex->return_value = &call_ret;
             is_ret_overloaded = 1;
         }
-        do_func_execute(object->pos, object->advice, object->ex, getThis());
+        do_func_execute(aop_object->pos, aop_object->advice, aop_object->ex, getThis());
         if (is_ret_overloaded == 0) {
             if (EG(exception) == NULL) {
-                ZVAL_COPY(return_value, object->ex->return_value);
+                ZVAL_COPY(return_value, aop_object->ex->return_value);
             }
         } else {
             if (EG(exception) == NULL) {
-                ZVAL_COPY_VALUE(return_value, object->ex->return_value);
+                ZVAL_COPY_VALUE(return_value, aop_object->ex->return_value);
             }
-            object->ex->return_value = NULL;
+            aop_object->ex->return_value = NULL;
         }
     }
 }
@@ -274,7 +297,7 @@ PHP_METHOD(AopJoinpoint, process)
 /* proto int AopJoinpoint::getKindOfAdvice() */
 PHP_METHOD(AopJoinpoint, getKindOfAdvice)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     RETURN_LONG(object->kind_of_advice);
 }
 
@@ -282,20 +305,17 @@ PHP_METHOD(AopJoinpoint, getKindOfAdvice)
 PHP_METHOD(AopJoinpoint, getObject)
 {
     zend_object *call_object = NULL;
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     
     if (object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY) {
         if (object->object != NULL) {
             RETURN_OBJ(object->object);
         }
     } else {
-#if PHP_MINOR_VERSION < 1
-        call_object = Z_OBJ(object->ex->This);
-#else
         if (Z_TYPE(object->ex->This) == IS_OBJECT) {
             call_object = Z_OBJ(object->ex->This);
         }
-#endif
+
         if (call_object != NULL) {
             RETURN_ZVAL(&object->ex->This, 1, 0);
         }
@@ -306,13 +326,19 @@ PHP_METHOD(AopJoinpoint, getObject)
 /* proto mixed AopJoinpoint::getReturnedValue() */
 PHP_METHOD(AopJoinpoint, getReturnedValue)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     
     if (object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY) {
-        zend_error(E_ERROR, "getReturnedValue is not available when the JoinPoint is a property operation (read or write)"); 
+        zend_error(
+            E_ERROR,
+            "getReturnedValue is not available when the JoinPoint is a property operation (read or write)"
+        );
     }
     if (object->current_pointcut->kind_of_advice & AOP_KIND_BEFORE) {
-        zend_error(E_ERROR, "getReturnedValue is not available when the advice was added with aop_add_before");
+        zend_error(
+            E_ERROR,
+            "getReturnedValue is not available when the advice was added with aop_add_before"
+        );
     }
 
     if (object->ex->return_value != NULL) {
@@ -326,11 +352,16 @@ PHP_METHOD(AopJoinpoint, getReturnedValue)
 /* proto void AopJoinpoint::setReturnedValue(mixed return_value) */
 PHP_METHOD(AopJoinpoint, setReturnedValue)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    // Returned value
     zval *ret;
+
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     
     if (object->kind_of_advice & AOP_KIND_WRITE) {
-        zend_error(E_ERROR, "setReturnedValue is not available when the JoinPoint is a property write operation"); 
+        zend_error(
+            E_ERROR,
+            "setReturnedValue is not available when the JoinPoint is a property write operation"
+        );
     }
     
     ZEND_PARSE_PARAMETERS_START(1, 1)
@@ -350,32 +381,29 @@ PHP_METHOD(AopJoinpoint, setReturnedValue)
 /* proto string AopJoinpoint::getClassName() */
 PHP_METHOD(AopJoinpoint, getClassName)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
 
     if (object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY) {
         if (object->object != NULL) {
-            zend_class_entry *ce = object->object->ce;
-            RETURN_STR(ce->name);
+            zend_class_entry *class_entry = object->object->ce;
+            RETURN_STR(class_entry->name);
         }
     } else {
-        zend_class_entry *ce = NULL;
+        zend_class_entry *class_entry = NULL;
         zend_object *call_object = NULL;
 
-#if PHP_MINOR_VERSION < 1
-        call_object = Z_OBJ(object->ex->This);
-#else
         if (Z_TYPE(object->ex->This) == IS_OBJECT) {
             call_object = Z_OBJ(object->ex->This);
         }
-#endif
+
         if (call_object != NULL) {
-            ce = Z_OBJCE(object->ex->This);
-            RETURN_STR(ce->name);
+            class_entry = Z_OBJCE(object->ex->This);
+            RETURN_STR(class_entry->name);
         }
 
         if (object->ex->func->common.fn_flags & ZEND_ACC_STATIC) {
-            ce = object->ex->func->common.scope; //object->ex->called_scope;
-            RETURN_STR(ce->name);
+            class_entry = object->ex->func->common.scope; // object->ex->called_scope;
+            RETURN_STR(class_entry->name);
         }
     }
     RETURN_NULL();
@@ -384,9 +412,11 @@ PHP_METHOD(AopJoinpoint, getClassName)
 /* proto string AopJoinpoint::getMethodName() */
 PHP_METHOD(AopJoinpoint, getMethodName)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     
-    if (object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY || object->current_pointcut->kind_of_advice & AOP_KIND_FUNCTION) {
+    if (object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY
+        || object->current_pointcut->kind_of_advice & AOP_KIND_FUNCTION
+    ) {
         zend_error(E_ERROR, "getMethodName is only available when the JoinPoint is a method call"); 
     }
     if (object->ex == NULL) {
@@ -398,10 +428,15 @@ PHP_METHOD(AopJoinpoint, getMethodName)
 /* proto string AopJoinpoint::getFunctionName() */
 PHP_METHOD(AopJoinpoint, getFunctionName)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     
-    if (object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY || object->current_pointcut->kind_of_advice & AOP_KIND_METHOD) {
-        zend_error(E_ERROR, "getMethodName is only available when the JoinPoint is a function call"); 
+    if (object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY
+        || object->current_pointcut->kind_of_advice & AOP_KIND_METHOD
+    ) {
+        zend_error(
+            E_ERROR,
+            "getMethodName is only available when the JoinPoint is a function call"
+        );
     }
     if (object->ex == NULL) {
         RETURN_NULL();
@@ -412,10 +447,13 @@ PHP_METHOD(AopJoinpoint, getFunctionName)
 /* proto mixed AopJoinpoint::getAssignedValue() */
 PHP_METHOD(AopJoinpoint, getAssignedValue)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     
     if (!(object->kind_of_advice & AOP_KIND_WRITE)) {
-        zend_error(E_ERROR, "getAssignedValue is only available when the JoinPoint is a property write operation"); 
+        zend_error(
+            E_ERROR,
+            "getAssignedValue is only available when the JoinPoint is a property write operation"
+        );
     }
 
     if (Z_TYPE(object->property_value) != IS_UNDEF) {
@@ -428,13 +466,18 @@ PHP_METHOD(AopJoinpoint, getAssignedValue)
 /* proto void AopJoinpoint::setAssignedValue(mixed property_value) */
 PHP_METHOD(AopJoinpoint, setAssignedValue)
 {
+    // Assigned value
     zval *assigned_value;
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
     
     if (object->kind_of_advice & AOP_KIND_READ) {
-        zend_error(E_ERROR, "setAssignedValue is not available when the JoinPoint is a property read operation"); 
+        zend_error(
+            E_ERROR,
+            "setAssignedValue is not available when the JoinPoint is a property read operation"
+        );
     }
-    //parse prameters
+    // Parse parameters
 	ZEND_PARSE_PARAMETERS_START(1, 1)
         Z_PARAM_ZVAL(assigned_value)
 	ZEND_PARSE_PARAMETERS_END_EX(
@@ -453,10 +496,13 @@ PHP_METHOD(AopJoinpoint, setAssignedValue)
 /* proto mixed AopJoinpoint::getPropertyName() */
 PHP_METHOD(AopJoinpoint, getPropertyName)
 {
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
 
     if (!(object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY)) {
-        zend_error(E_ERROR, "getPropertyName is only available when the JoinPoint is a property operation (read or write)"); 
+        zend_error(
+            E_ERROR,
+            "getPropertyName is only available when the JoinPoint is a property operation (read or write)"
+        );
     }
 
     if (object->member != NULL) {
@@ -468,15 +514,22 @@ PHP_METHOD(AopJoinpoint, getPropertyName)
 /* proto mixed AopJoinpoint::getPropertyValue() */
 PHP_METHOD(AopJoinpoint, getPropertyValue)
 {
+    // Property value
     zval *ret;
-    AopJoinpoint_object *object = (AopJoinpoint_object *)Z_OBJ_P(getThis());
+
+    AopJoinpoint_object *object = (AopJoinpoint_object *) Z_OBJ_P(getThis());
 
     if (!(object->current_pointcut->kind_of_advice & AOP_KIND_PROPERTY)) {
         zend_error(E_ERROR, "getPropertyValue is only available when the JoinPoint is a property operation (read or write)"); 
     }
 
     if (object->object != NULL && object->member != NULL) {
-       ret = aop_get_property_ptr_ptr(object->object, object->member, object->type, object->cache_slot);
+       ret = aop_get_property_ptr_ptr(
+           object->object,
+           object->member,
+           object->type,
+           object->cache_slot
+       );
     }
     RETURN_ZVAL(ret, 1, 0);
 }
