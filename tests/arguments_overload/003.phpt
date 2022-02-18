@@ -2,6 +2,7 @@
 Common argument overload
 --FILE--
 <?php
+
 function test($p1, $p2 = 200)
 {
     $a = 100;
@@ -10,7 +11,7 @@ function test($p1, $p2 = 200)
     return $p2 + $a;
 }
 
-aop_add_before("test()", function($jp){
+aop_add_before("test()", function($jp) {
     $args = $jp->getArguments();
     $args[1] = 300;
 

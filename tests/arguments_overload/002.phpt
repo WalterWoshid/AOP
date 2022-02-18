@@ -3,20 +3,27 @@ Args overload arguments call (try in the second around declared)
 --FILE--
 <?php 
 
-class mytest {
-	public function test ($data) {
+class mytest
+{
+	public function test ($data)
+	{
 		var_dump($data);
 	}
 }
 
-aop_add_around("mytest::test()",function ($pObj) {
+aop_add_around("mytest::test()", function ($pObj) {
     echo "OVERLOAD\n";
     var_dump($pObj->getArguments());
     $pObj->setArguments(array('overload'));
     $pObj->process();
 });
 
-aop_add_around("mytest::test()",function ($pObj) {echo "NOOVERLOAD\n";var_dump($pObj->getArguments());$pObj->process();});
+aop_add_around("mytest::test()", function ($pObj) {
+    echo "NOOVERLOAD\n";
+    var_dump($pObj->getArguments());
+    $pObj->process();
+});
+
 $test = new mytest();
 $test->test("first");
 
