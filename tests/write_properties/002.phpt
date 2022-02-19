@@ -3,16 +3,18 @@ Write Property Test Test Recursion Loop
 --FILE--
 <?php 
 
-class Tracer {
-    private $_modified = array ();
+class Tracer
+{
+    private $_modified = [];
 
-    private $_original = array ();
+    private $_original = [];
 
-    public function touch ($pObject) {
+    public function touch($pObject)
+    {
         $pVarName = $pObject->getPropertyName();
         $pValue = $pObject->getAssignedValue();
         $pObjectModify = $pObject->getObject();
-        if (!isset ($this->_original[$pVarName])) {
+        if (!isset($this->_original[$pVarName])) {
             $this->_original[$pVarName] = $pObjectModify->$pVarName;
         }
         $this->_modified[$pVarName] = $pValue;
@@ -21,25 +23,24 @@ class Tracer {
         }
     }
 
-    public function getModified () {
+    public function getModified()
+    {
         return $this->_modified;
     }
 }
 
-class A {
-
+class A
+{
 
 }
 
-
-$tracer = new Tracer ();
-
+$tracer = new Tracer();
 
 $test = new A();
 $test->var1 = 'test';
 $test->var2 = 'test2';
 
-aop_add_before("write A::*", array ($tracer, 'touch'));
+aop_add_before("write A::*", [$tracer, 'touch']);
 
 $test->var1 = 'test_modified';
 $test->var2 = 'test_modified';

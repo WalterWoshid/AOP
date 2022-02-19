@@ -3,27 +3,30 @@ Write Property Test
 --FILE--
 <?php 
 
-class Tracer {
-    private $_modified = array ();
+class Tracer
+{
+    private $_modified = [];
 
-    public function touch ($pObject) {
+    public function touch($pObject)
+    {
         $pVarName = $pObject->getPropertyName();
         $this->_modified[] = $pVarName;
     }
-    public function getModified () {
+
+    public function getModified()
+    {
         return $this->_modified;
     }
 }
 
-class A {
-
+class A
+{
 
 }
 
+$tracer = new Tracer();
 
-$tracer = new Tracer ();
-
-aop_add_before("write A::V*", array ($tracer, 'touch'));
+aop_add_before("write A::V*", [$tracer, 'touch']);
 
 $test = new A();
 $test->var1 = 'test';
