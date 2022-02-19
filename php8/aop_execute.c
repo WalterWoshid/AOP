@@ -140,7 +140,7 @@ static zend_array *calculate_class_pointcuts(zend_class_entry *class_entry, poin
             continue;
         }
 
-        if ((class_entry == NULL && (pc->kind_of_advice & AOP_KIND_FUNCTION))
+        if ((class_entry == NULL && pc->kind_of_advice & AOP_KIND_FUNCTION)
             || (class_entry != NULL && pointcut_match_zend_class_entry(pc, class_entry))
         ) {
             zend_hash_next_index_insert(hash_table, pc_value);
@@ -202,7 +202,7 @@ static int pointcut_match_zend_function(pointcut *pc, zend_execute_data *ex)
         }
     } else {
         int comp_start = (ZSTR_VAL(pc->method_name)[0] == '\\') ? 1 : 0;
-        if (strcasecmp(ZSTR_VAL(pc->method_name) + comp_start, ZSTR_VAL(curr_func->common.function_name)) > 0) {
+        if (strcasecmp(ZSTR_VAL(pc->method_name) + comp_start, ZSTR_VAL(curr_func->common.function_name)) != 0) {
             return 0;
         }
     }

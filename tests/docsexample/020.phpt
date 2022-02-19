@@ -2,41 +2,45 @@
 An advice that knows you're dealing with an object's property
 --FILE--
 <?php
-    class Paparazzi
+
+class Paparazzi
+{
+    public function alert()
     {
-        public function alert ()
-        {
-            echo "Celebrity will act or say something !";
-        }
+        echo "Celebrity will act or say something! ";
     }
+}
 
-    class Celebrity 
-    {
-       public $publicStuff = 'public thinking';
-       private $secretStuff;
-       public function act ()
-       {
-          $this->secretStuff = 'secret';
-       }
+class Celebrity
+{
+   public $publicStuff = 'public thinking';
 
-       public function say ()
-       {
-          echo $this->publicStuff;
-       }
-    }
+   private $secretStuff;
 
-    //the advice is a simple function
-    $paparazzi = new Paparazzi(); 
-    $paparazzi_informer = function () use ($paparazzi) 
-    {
-       $paparazzi->alert();
-    };
+   public function act()
+   {
+      $this->secretStuff = 'secret';
+   }
 
-    aop_add_before('Celebrity->*Stuff', $paparazzi_informer);
-    
-    $CynthiaBellulla = new Celebrity();
-    $CynthiaBellulla->act();
-    echo $CynthiaBellulla->say();
+   public function say()
+   {
+      echo $this->publicStuff;
+   }
+}
+
+// The advice is a simple function
+$paparazzi = new Paparazzi();
+$paparazzi_informer = function () use ($paparazzi)
+{
+   $paparazzi->alert();
+};
+
+aop_add_before('Celebrity->*Stuff', $paparazzi_informer);
+
+$CynthiaBellulla = new Celebrity();
+$CynthiaBellulla->act();
+echo $CynthiaBellulla->say();
+
 ?>
 --EXPECT--
-Celebrity will act or say something !Celebrity will act or say something !public thinking
+Celebrity will act or say something! Celebrity will act or say something! public thinking
